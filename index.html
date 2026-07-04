@@ -1,0 +1,1112 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ジャグラー設定予想ツール</title>
+<style>
+  :root{
+    --bg:#0f1117;--panel:#1a1d27;--panel2:#232735;--line:#313646;
+    --txt:#e7eaf2;--sub:#9aa3b8;--accent:#ffce3a;--blue:#46a0ff;
+    --green:#37d67a;--red:#ff5d5d;--purple:#b07bff;--orange:#ff9b2f;--radius:14px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;background:var(--bg);color:var(--txt);-webkit-font-smoothing:antialiased}
+  header{position:sticky;top:0;z-index:50;background:linear-gradient(180deg,#1c2030,#15181f);border-bottom:1px solid var(--line);padding:12px 16px}
+  .brand{display:flex;align-items:center;gap:10px}
+  .logo{width:34px;height:34px;border-radius:9px;background:radial-gradient(circle at 30% 30%,#ffe079,#ff9b2f);display:grid;place-items:center;font-weight:900;color:#3a2a00;font-size:18px;box-shadow:0 0 14px rgba(255,180,40,.5)}
+  .brand h1{font-size:17px;margin:0;letter-spacing:.5px}
+  .brand small{color:var(--sub);font-size:11px}
+  #srvdot{margin-left:auto;font-size:11px;color:var(--sub);display:flex;align-items:center;gap:5px}
+  #srvdot i{width:8px;height:8px;border-radius:50%;background:var(--sub)}
+  #srvdot.on i{background:var(--green)}#srvdot.off i{background:var(--red)}
+  nav{display:flex;gap:6px;margin-top:12px;overflow-x:auto;padding-bottom:2px}
+  nav button{flex:0 0 auto;background:var(--panel2);color:var(--sub);border:1px solid var(--line);padding:9px 13px;border-radius:999px;font-size:13px;cursor:pointer;white-space:nowrap;transition:.15s;font-weight:600}
+  nav button.active{background:var(--accent);color:#3a2a00;border-color:var(--accent);box-shadow:0 0 12px rgba(255,206,58,.4)}
+  main{max-width:760px;margin:0 auto;padding:16px 14px 70px}
+  section{display:none;animation:fade .25s ease}
+  section.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:14px}
+  .card h2{margin:0 0 4px;font-size:16px}
+  .card .desc{color:var(--sub);font-size:12px;margin:0 0 14px}
+  label{display:block;font-size:12px;color:var(--sub);margin:0 0 5px}
+  input,select,textarea{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--txt);padding:11px 12px;border-radius:10px;font-size:15px;outline:none;font-family:inherit}
+  input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+  .field{margin-bottom:12px}
+  button.btn{width:100%;background:var(--accent);color:#3a2a00;border:none;padding:13px;border-radius:11px;font-size:15px;font-weight:800;cursor:pointer;transition:.15s}
+  button.btn:active{transform:scale(.98)}
+  button.btn.sec{background:var(--panel2);color:var(--txt);border:1px solid var(--line)}
+  .row{display:flex;gap:10px}
+  .pill{display:inline-block;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:700}
+  .muted{color:var(--sub);font-size:12px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:right}
+  th:first-child,td:first-child{text-align:left}
+  th{color:var(--sub);font-weight:600;font-size:11px}
+  .barwrap{background:var(--panel2);border-radius:8px;overflow:hidden;height:26px;position:relative}
+  .bar{height:100%;display:flex;align-items:center;padding-left:8px;font-size:11px;font-weight:700;color:#fff;transition:width .5s;white-space:nowrap}
+  .stat{text-align:center;padding:10px;background:var(--panel2);border-radius:11px;border:1px solid var(--line)}
+  .stat .v{font-size:21px;font-weight:800}.stat .k{font-size:11px;color:var(--sub)}
+  canvas{width:100%;display:block;background:var(--panel2);border-radius:10px;border:1px solid var(--line)}
+  .empty{text-align:center;color:var(--sub);padding:26px 10px;font-size:13px}
+  .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+  .cal .dow{text-align:center;font-size:11px;color:var(--sub);padding:4px 0}
+  .cal .day{aspect-ratio:1;background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:4px;font-size:12px;cursor:pointer;position:relative;overflow:hidden}
+  .cal .day.empty-cell{background:transparent;border:none;cursor:default}
+  .cal .day.today{border-color:var(--accent)}
+  .cal .day .num{font-weight:700}
+  .cal .day .dot{position:absolute;bottom:4px;left:4px;right:4px;display:flex;gap:2px;flex-wrap:wrap}
+  .cal .day .dot span{width:6px;height:6px;border-radius:50%}
+  .cal .day.sun .num{color:#ff7b7b}.cal .day.sat .num{color:#7bb8ff}
+  .calhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+  .calhead button{background:var(--panel2);border:1px solid var(--line);color:var(--txt);width:38px;height:38px;border-radius:10px;font-size:18px;cursor:pointer}
+  .evitem{display:flex;gap:8px;align-items:center;padding:9px;background:var(--panel2);border-radius:9px;margin-bottom:7px;border:1px solid var(--line)}
+  .evitem .x{margin-left:auto;color:var(--sub);cursor:pointer;padding:2px 6px}
+  .recitem{padding:11px;background:var(--panel2);border-radius:11px;margin-bottom:9px;border:1px solid var(--line)}
+  .recitem .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+  .recitem .meta{font-size:11px;color:var(--sub)}
+  .tag{font-size:10px;padding:2px 7px;border-radius:6px;font-weight:700}
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;z-index:100;align-items:flex-end}
+  .modal.show{display:flex}
+  .sheet{background:var(--panel);width:100%;max-width:760px;margin:0 auto;border-radius:18px 18px 0 0;padding:18px;border:1px solid var(--line);max-height:85vh;overflow:auto}
+  .sheet h3{margin:0 0 14px}
+  .legend{display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:var(--sub);margin-top:8px}
+  .legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:4px}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--accent);color:#3a2a00;padding:11px 20px;border-radius:999px;font-weight:700;font-size:13px;z-index:200;opacity:0;transition:.3s;pointer-events:none;max-width:90%}
+  .toast.show{opacity:1}
+  .seg{display:flex;background:var(--panel2);border-radius:10px;padding:3px;border:1px solid var(--line)}
+  .seg button{flex:1;background:transparent;border:none;color:var(--sub);padding:8px;border-radius:8px;font-size:13px;cursor:pointer;font-weight:700}
+  .seg button.on{background:var(--accent);color:#3a2a00}
+  .note{background:rgba(70,160,255,.1);border:1px solid rgba(70,160,255,.3);border-radius:10px;padding:10px 12px;font-size:12px;color:#bcd6f5;margin-bottom:12px}
+  .warn{background:rgba(255,93,93,.1);border:1px solid rgba(255,93,93,.35);border-radius:10px;padding:10px 12px;font-size:12px;color:#ffb9b9;margin-bottom:12px}
+  .scrollx{overflow-x:auto}
+  .analyrow{display:flex;align-items:center;gap:8px;margin-bottom:7px;font-size:12px}
+  .analyrow .lab{width:84px;flex:0 0 auto;color:var(--sub)}
+  .analyrow .bw{flex:1;background:var(--panel2);border-radius:6px;height:20px;overflow:hidden}
+  .analyrow .bw>div{height:100%}
+  .analyrow .val{width:80px;flex:0 0 auto;text-align:right;font-weight:700}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="logo">G</div>
+    <div>
+      <h1>ジャグラー設定予想ツール</h1>
+      <small>6号機8機種スペック内蔵 / 大分エリア対応</small>
+    </div>
+  </div>
+  <nav id="nav">
+    <button data-t="yosou" class="active">🎯 設定予想</button>
+    <button data-t="cal">📅 カレンダー</button>
+    <button data-t="sim">🎰 シミュレーター</button>
+    <button data-t="play">🕹️ 実機スロット</button>
+    <button data-t="grape">🍇 ブドウカウンター</button>
+  </nav>
+</header>
+
+<main>
+  <!-- ===================== 設定予想 ===================== -->
+  <section id="yosou" class="active">
+    <div class="card">
+      <h2>設定予想（ベイズ推定）</h2>
+      <p class="desc">機種を選び、回転数・BIG・REG・ブドウから設定1〜6の確率を数学的に推定します（ポアソン尤度×ベイズ更新）。機種ごとの設定差を反映。</p>
+      <div class="field"><label>機種</label><select id="y_model" onchange="onModelChange('y')"></select></div>
+      <div class="grid2">
+        <div class="field"><label>総回転数 G</label><input id="y_g" type="number" inputmode="numeric" placeholder="例: 5000"></div>
+        <div class="field"><label>BIG 回数</label><input id="y_big" type="number" inputmode="numeric" placeholder="例: 20"></div>
+        <div class="field"><label>REG 回数</label><input id="y_reg" type="number" inputmode="numeric" placeholder="例: 18"></div>
+        <div class="field" id="y_grapewrap"><label>ブドウ回数（任意・精度UP）</label><input id="y_grape" type="number" inputmode="numeric" placeholder="例: 850"></div>
+      </div>
+      <button class="btn" onclick="runYosou()">設定を予想する</button>
+    </div>
+    <div class="card" id="y_result" style="display:none">
+      <h2>予想結果</h2>
+      <div class="grid3" style="margin-bottom:14px">
+        <div class="stat"><div class="v" id="y_comb">-</div><div class="k">合算確率</div></div>
+        <div class="stat"><div class="v" id="y_regp">-</div><div class="k">REG確率</div></div>
+        <div class="stat"><div class="v" id="y_exp">-</div><div class="k">期待設定</div></div>
+      </div>
+      <div id="y_bars"></div>
+      <p class="muted" id="y_note" style="margin-top:12px"></p>
+    </div>
+    <div class="card" id="y_result2" style="display:none">
+      <h2 style="font-size:15px">🎯 RB重視予測</h2>
+      <p class="desc">ジャグラーはREG(RB)の設定差が大きく分散も小さいため、REGの信頼度を上げ・BIGの信頼度を下げた<b>重み付きベイズ</b>で再推定。合算だけでは見えにくい高低を炙り出します。</p>
+      <div class="grid2" style="margin-bottom:12px">
+        <div class="stat"><div class="v" id="y_exp2">-</div><div class="k">期待設定(RB重視)</div></div>
+        <div class="stat"><div class="v" id="y_gap">-</div><div class="k">通常予測との差</div></div>
+      </div>
+      <div id="y_bars2"></div>
+      <p class="muted" id="y_note2" style="margin-top:12px"></p>
+    </div>
+    <div class="card">
+      <h2 style="font-size:14px">この機種の設定別スペック</h2>
+      <div class="scrollx"><table id="y_spec"></table></div>
+    </div>
+  </section>
+
+  <!-- ===================== イベント ===================== -->
+  <section id="cal">
+    <div class="card">
+      <div class="calhead">
+        <button onclick="calMove(-1)">‹</button>
+        <h2 id="cal_title" style="margin:0">-</h2>
+        <button onclick="calMove(1)">›</button>
+      </div>
+      <div class="cal" id="cal_dow"></div>
+      <div class="cal" id="cal_grid" style="margin-top:4px"></div>
+      <div class="legend">
+        <span><i style="background:var(--red)"></i>取材/特日</span>
+        <span><i style="background:var(--blue)"></i>旧イベント日</span>
+        <span><i style="background:var(--green)"></i>並び/狙い目</span>
+        <span><i style="background:var(--purple)"></i>その他</span>
+      </div>
+      <p class="muted" style="margin-top:10px">日付をタップして手入力で登録（店舗・種別・メモ・注目度★）。</p>
+    </div>
+    <div class="card">
+      <h2 style="font-size:14px">友達と共有（グループ）</h2>
+      <div id="cal_conn" class="warn">読み込み中...</div>
+      <div class="field"><label>グループ名（友達と同じ名前にすると共有されます）</label>
+        <input id="cal_room" type="text" placeholder="例: oita-friends" onchange="setRoom(this.value)"></div>
+      <div class="grid2">
+        <button class="btn sec" onclick="roomLink()">🔗 参加リンクをコピー</button>
+        <button class="btn sec" onclick="exportEvents()">💾 バックアップ書出</button>
+      </div>
+      <div style="margin-top:10px">
+        <button class="btn sec" onclick="document.getElementById('imp_file').click()">📥 JSON読込（取込）</button>
+        <input type="file" id="imp_file" accept="application/json" style="display:none" onchange="onImportFile(this)">
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== シミュレーター ===================== -->
+  <section id="sim">
+    <div class="card">
+      <h2>実戦シミュレーター（詳細）</h2>
+      <p class="desc">機種・設定・回転数を指定し、1回のホール実戦を詳細に再現。<b>BB/RBが何回転目に出たか・ハマり・出玉推移</b>まで表示します（長期期待値は公表機械割に一致）。</p>
+      <div class="field"><label>機種</label><select id="sim_model" onchange="onModelChange('sim')"></select></div>
+      <div class="field"><label>設定</label>
+        <div class="seg" id="sim_seg">
+          <button data-s="1">1</button><button data-s="2">2</button><button data-s="3">3</button>
+          <button data-s="4">4</button><button data-s="5">5</button><button data-s="6" class="on">6</button>
+        </div>
+      </div>
+      <div class="field"><label>回転数</label><input id="sim_g" type="number" value="8000"></div>
+      <button class="btn" onclick="runSim()">シミュレート開始</button>
+    </div>
+    <div class="card" id="sim_result" style="display:none">
+      <h2>結果サマリー</h2>
+      <div class="grid3" style="margin-bottom:10px">
+        <div class="stat"><div class="v" id="sim_coin">-</div><div class="k">差枚</div></div>
+        <div class="stat"><div class="v" id="sim_rate">-</div><div class="k">機械割</div></div>
+        <div class="stat"><div class="v" id="sim_comb">-</div><div class="k">合算</div></div>
+      </div>
+      <div class="grid3" style="margin-bottom:14px">
+        <div class="stat"><div class="v" id="sim_bb" style="color:var(--red)">-</div><div class="k">BB回数</div></div>
+        <div class="stat"><div class="v" id="sim_rb" style="color:var(--blue)">-</div><div class="k">RB回数</div></div>
+        <div class="stat"><div class="v" id="sim_grape">-</div><div class="k">ぶどう確率</div></div>
+      </div>
+      <canvas id="sim_canvas" width="700" height="260"></canvas>
+      <p class="muted" id="sim_note" style="margin:10px 0"></p>
+      <h2 style="font-size:14px">ボーナス履歴</h2>
+      <div class="scrollx" style="max-height:300px;overflow:auto;border:1px solid var(--line);border-radius:10px"><table id="sim_hist"></table></div>
+    </div>
+  </section>
+
+</main>
+
+  <!-- ===================== 実機風スロット ===================== -->
+  <section id="play">
+    <style>
+      #play .wrap{max-width:392px;margin:0 auto}
+      /* ---- データカウンター ---- */
+      #play .drobo{background:#05070c;border:2px solid #2a3340;border-radius:12px;padding:8px;display:flex;gap:8px;box-shadow:0 0 0 3px #11161f inset,0 0 18px rgba(0,200,255,.12);margin-bottom:10px}
+      #play .dro-l{flex:0 0 116px;display:flex;flex-direction:column;gap:3px}
+      #play .dro-row{display:flex;align-items:baseline;gap:4px}
+      #play .dlbl{font-size:9px;color:#8aa}
+      #play .seg{font-family:"Courier New",monospace;font-weight:900;letter-spacing:1px;line-height:1}
+      #play .seg.red{color:#ff2b2b;text-shadow:0 0 8px rgba(255,40,40,.85);font-size:34px}
+      #play .seg.grn{color:#37f06b;text-shadow:0 0 8px rgba(55,240,107,.8);font-size:22px}
+      #play .seg.org{color:#ffae2b;text-shadow:0 0 7px rgba(255,174,43,.8);font-size:18px}
+      #play .seg.sm{font-size:18px}
+      #play .dro-mini{font-size:10px;color:#cfe;margin-top:1px}
+      #play .dro-mini b{color:#ffd23a}
+      #play .dro-r{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+      #play .dro-r canvas{width:100%;display:block;background:#0a0e15;border:1px solid #1c2735;border-radius:6px}
+      #play .dro-mini2{font-size:10px;color:#cfe}#play .dro-mini2 b{color:#ffd23a}
+      /* ---- 筐体 ---- */
+      #play .cab{background:linear-gradient(180deg,#ff5e7a,#d11f44 60%,#9c1530);border:2px solid #ffd0db;border-radius:18px 18px 16px 16px;padding:10px;box-shadow:0 12px 30px rgba(0,0,0,.5),0 0 0 4px #6a0f24 inset}
+      #play .marquee{background:linear-gradient(180deg,#2a1240,#120726);border:2px solid #ffd23a;border-radius:10px;padding:7px;display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:8px;overflow:hidden;position:relative}
+      #play .marquee:before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 20% 0,rgba(255,210,90,.3),transparent 40%),radial-gradient(circle at 80% 100%,rgba(120,80,255,.3),transparent 40%)}
+      #play .mqttl{font-weight:900;font-size:20px;letter-spacing:3px;color:#fff;text-shadow:0 0 10px #ffd23a,0 2px 0 #b8860b;z-index:1}
+      #play .mqstar{color:#ffd23a;font-size:16px;z-index:1;animation:tw 1.2s infinite alternate}
+      @keyframes tw{from{opacity:.4;transform:scale(.85)}to{opacity:1;transform:scale(1.15)}}
+      #play .reels{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;background:#0a0a0f;border:3px solid #1a1a22;border-radius:10px;padding:7px;position:relative}
+      #play .reel{height:198px;overflow:hidden;background:linear-gradient(180deg,#fffef8,#eef0f4);border-radius:5px;position:relative;box-shadow:0 0 0 1px #ccc inset}
+      #play .reel:before{content:"";position:absolute;inset:0;z-index:3;pointer-events:none;background:linear-gradient(180deg,rgba(0,0,0,.35),transparent 22% 78%,rgba(0,0,0,.35))}
+      #play .strip{will-change:transform}
+      #play .strip.blur{filter:blur(1.4px)}
+      #play .cell{height:66px;display:grid;place-items:center;border-bottom:1px solid #e7e7ee}
+      #play .cell svg{width:58px;height:58px;display:block}
+      #play .payline{position:absolute;left:6px;right:6px;top:50%;height:64px;transform:translateY(-50%);border:3px solid rgba(255,60,60,.55);border-radius:7px;pointer-events:none;z-index:4}
+      #play .payline.win{border-color:#ffe23a;box-shadow:0 0 16px 3px rgba(255,210,40,.9),0 0 30px 8px rgba(255,160,0,.6) inset;animation:lampPulse .25s infinite alternate}
+      #play .flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:6;border-radius:8px}
+      #play .flash.go{animation:flbang .5s}
+      @keyframes flbang{0%{opacity:.85}100%{opacity:0}}
+      #play .banner{position:absolute;inset:0;display:none;place-items:center;background:rgba(8,6,14,.82);border-radius:8px;z-index:7;text-align:center}
+      #play .banner.show{display:grid;animation:fade .2s}
+      #play .banner .bnr{font-size:40px;font-weight:900;color:#ffd23a;text-shadow:0 0 18px rgba(255,180,40,.95),0 0 36px rgba(255,120,0,.7);animation:lampPulse .35s infinite alternate}
+      #play .banner #pl_banner_s{color:#fff;font-weight:800;font-size:16px;margin-top:4px}
+      @keyframes lampPulse{from{transform:scale(1)}to{transform:scale(1.07)}}
+      /* ---- ベルト(ランプ+LED) ---- */
+      #play .belt{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:9px 2px}
+      #play .ledbox{background:#0a0a0f;border:1px solid #5a1020;border-radius:7px;padding:3px 8px;text-align:center;min-width:62px}
+      #play .led-l{display:block;font-size:8px;color:#ff8aa0;letter-spacing:1px}
+      #play .lamp{width:84px;height:84px;border-radius:50%;flex:0 0 auto;background:radial-gradient(circle at 50% 38%,#42434e,#1a1a22);border:4px solid #2a2a34;display:grid;place-items:center;color:#4a4b55;transition:.08s;position:relative}
+      #play .lamp svg{width:54px;height:54px}
+      #play .lamp.on{background:radial-gradient(circle at 50% 38%,#fffce0,#ffd23a 55%,#ff8a00);border-color:#fff3b0;color:#7a3a00;box-shadow:0 0 26px 8px rgba(255,185,40,.85),0 0 60px 20px rgba(255,140,0,.5);animation:lampPulse .45s infinite alternate}
+      #play .lamp.prem{background:conic-gradient(#ff4d4d,#ffd23a,#37f06b,#46a0ff,#b07bff,#ff4d4d);border-color:#fff;color:#222;animation:spin360 .7s linear infinite,lampPulse .4s infinite alternate}
+      @keyframes spin360{to{transform:rotate(360deg)}}
+      /* ---- 操作デッキ ---- */
+      #play .deck{background:linear-gradient(180deg,#d9dde4,#aeb4c0);border:2px solid #f4f6fa;border-radius:12px;padding:10px;display:flex;align-items:center;gap:10px;box-shadow:0 4px 10px rgba(0,0,0,.3) inset}
+      #play .lever{width:58px;height:84px;flex:0 0 auto;border-radius:10px;background:linear-gradient(180deg,#3a3f4a,#23262e);border:2px solid #565b66;display:flex;align-items:flex-start;justify-content:center;cursor:pointer;position:relative;box-shadow:0 3px 0 #14161b}
+      #play .lever .knob{width:30px;height:30px;border-radius:50%;margin-top:-12px;background:radial-gradient(circle at 35% 30%,#ff8aa0,#d11f44 60%,#7a0f24);border:3px solid #ffd0db;box-shadow:0 4px 8px rgba(0,0,0,.5);transition:.1s}
+      #play .lever:active .knob{margin-top:34px}
+      #play .lever.dis{opacity:.5;pointer-events:none}
+      #play .bets{flex:1;display:flex;align-items:center;gap:8px}
+      #play .betbtn{flex:0 0 auto;width:54px;height:54px;border-radius:10px;border:none;background:linear-gradient(180deg,#ffd23a,#e0a800);color:#5a3a00;font-weight:900;font-size:12px;line-height:1.1;cursor:pointer;box-shadow:0 4px 0 #9c7400}
+      #play .betbtn:active{transform:translateY(3px);box-shadow:0 1px 0 #9c7400}
+      #play .betbtn:disabled{background:#9a9a9a;color:#666;box-shadow:0 4px 0 #6a6a6a}
+      #play .stops{flex:1;display:flex;gap:9px;justify-content:flex-end}
+      #play .stopbtn{width:54px;height:54px;border-radius:50%;border:none;background:radial-gradient(circle at 40% 32%,#ff9db2,#e83b63 62%,#a01636);color:#fff;font-size:18px;font-weight:900;cursor:pointer;box-shadow:0 5px 0 #7c1130,0 0 0 3px #fff inset}
+      #play .stopbtn:active{transform:translateY(4px);box-shadow:0 1px 0 #7c1130,0 0 0 3px #fff inset}
+      #play .stopbtn:disabled{background:radial-gradient(circle at 40% 32%,#777,#444);color:#aaa;box-shadow:0 5px 0 #333,0 0 0 3px #999 inset;cursor:default}
+      #play .lpanel{margin-top:9px;background:linear-gradient(180deg,#2a1240,#120726);border:2px solid #ffd23a;border-radius:10px;padding:9px;text-align:center;color:#ffd23a;font-weight:900;letter-spacing:2px;font-size:13px;text-shadow:0 0 8px rgba(255,210,60,.6)}
+      /* ---- 下部操作 ---- */
+      #play .refill{background:var(--green);color:#06351c;border:none;border-radius:10px;padding:11px;font-weight:800;cursor:pointer;width:100%;margin-top:10px}
+      #play .optrow{display:flex;align-items:center;gap:14px;margin-top:10px;flex-wrap:wrap}
+      #play .optrow label{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--sub);margin:0}
+      #play .optrow input[type=checkbox]{width:auto}
+      #play .optrow select{width:auto;padding:6px 8px}
+      #play .pstate{font-size:12px;font-weight:700;color:var(--accent)}
+    </style>
+    <div class="card">
+      <h2>実機風スロット（ジャグラータイプ）</h2>
+      <p class="desc">マイジャグラーV の実確率・実機リール配列で動く<b>オリジナル版</b>。光ったら（ペカ＝告知ランプ点灯）ボーナス確定！ 上部のデータカウンターはプレイと連動します。<br><span class="muted">※非公式ファン制作・個人利用向け。実機の画像/キャラクター/「GOGO!」ロゴ/音源は不使用。図柄・演出・音はすべて独自。</span></p>
+      <div class="wrap">
+        <!-- データカウンター -->
+        <div class="drobo">
+          <div class="dro-l">
+            <div class="dro-row"><span class="dlbl">大当り</span><span class="seg red" id="dr_total">0</span><span class="dlbl">回</span></div>
+            <div class="dro-row"><span class="dlbl">現在</span><span class="seg grn" id="dr_cur">0</span><span class="dlbl">G</span></div>
+            <div class="dro-row"><span class="dlbl">累計</span><span class="seg org" id="dr_cum">0</span></div>
+            <div class="dro-mini">BB <b id="dr_bb">0</b>　RB <b id="dr_rb">0</b></div>
+            <div class="dro-mini">BB <span id="dr_bbr">1/-</span>　RB <span id="dr_rbr">1/-</span></div>
+            <div class="dro-mini">合成 <span id="dr_syn">1/-</span></div>
+          </div>
+          <div class="dro-r">
+            <canvas id="dr_graph" width="380" height="118"></canvas>
+            <div class="dro-mini2">獲得 <b id="dr_diff2">0</b>枚 ／ 最大 <b id="dr_max">0</b>枚</div>
+            <canvas id="dr_hist" width="380" height="46"></canvas>
+          </div>
+        </div>
+        <!-- 筐体 -->
+        <div class="cab">
+          <div class="marquee"><span class="mqstar">★</span><span class="mqttl">MY SLOT</span><span class="mqstar">★</span></div>
+          <div class="reels">
+            <div class="reel"><div class="strip" id="pl_r0"></div></div>
+            <div class="reel"><div class="strip" id="pl_r1"></div></div>
+            <div class="reel"><div class="strip" id="pl_r2"></div></div>
+            <div class="payline" id="pl_payline"></div>
+            <div class="banner" id="pl_banner"><div><div class="bnr" id="pl_banner_t">BIG</div><div id="pl_banner_s"></div></div></div>
+            <div class="flash" id="pl_flash"></div>
+          </div>
+          <div class="belt">
+            <div class="ledbox"><span class="led-l">CREDIT</span><span class="seg red sm" id="pl_credit">50</span></div>
+            <div class="lamp" id="pl_lamp"><svg viewBox="0 0 100 100"><circle cx="38" cy="44" r="6" fill="currentColor"/><circle cx="62" cy="44" r="6" fill="currentColor"/><path d="M33 60 q17 17 34 0" stroke="currentColor" stroke-width="6" fill="none" stroke-linecap="round"/></svg></div>
+            <div class="ledbox"><span class="led-l">PAYOUT</span><span class="seg red sm" id="pl_payout">0</span></div>
+          </div>
+          <div class="deck">
+            <div class="lever" id="pl_lever" onclick="PL.spin()" title="レバーON"><span class="knob"></span></div>
+            <div class="bets">
+              <button class="betbtn" id="pl_max" onclick="PL.spin()">MAX<br>BET</button>
+              <div class="stops">
+                <button class="stopbtn" id="pl_s0" disabled onclick="PL.stop(0)">1</button>
+                <button class="stopbtn" id="pl_s1" disabled onclick="PL.stop(1)">2</button>
+                <button class="stopbtn" id="pl_s2" disabled onclick="PL.stop(2)">3</button>
+              </div>
+            </div>
+          </div>
+          <div class="lpanel">ORIGINAL SLOT</div>
+        </div>
+        <button class="refill" id="pl_refill" style="display:none" onclick="PL.refill()">メダルを補充（+50）</button>
+        <div class="optrow">
+          <label><input type="checkbox" id="pl_sound" checked> 効果音</label>
+          <label><input type="checkbox" id="pl_auto"> オート消化</label>
+          <span class="pstate" id="pl_state">レバーON待ち</span>
+          <span style="margin-left:auto;display:flex;align-items:center;gap:6px;color:var(--sub);font-size:12px">設定
+            <select id="pl_setting"><option value="0">1</option><option value="1">2</option><option value="2">3</option><option value="3">4</option><option value="4">5</option><option value="5" selected>6</option></select>
+          </span>
+        </div>
+        <p class="muted" id="pl_hint" style="margin-top:8px">合算 1/-- ／ ぶどう 1/-- ／ 機械割 --%</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== ブドウカウンター ===================== -->
+  <section id="grape">
+    <style>
+      #grape .gcbig{width:100%;padding:22px;border-radius:16px;border:none;background:linear-gradient(180deg,#9c68e0,#6a3bbf);color:#fff;font-size:22px;font-weight:900;cursor:pointer;box-shadow:0 6px 0 #4a2a86;letter-spacing:1px}
+      #grape .gcbig:active{transform:translateY(4px);box-shadow:0 2px 0 #4a2a86}
+      #grape .gccount{font-size:44px;font-weight:900;color:#b07bff;text-align:center;line-height:1;font-family:"Courier New",monospace}
+      #grape .gcsub{display:flex;gap:8px;margin-top:10px}
+      #grape .gcsub button{flex:1;background:var(--panel2);border:1px solid var(--line);color:var(--txt);padding:11px;border-radius:10px;font-weight:700;cursor:pointer}
+      #grape .qg{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+      #grape .qg button{flex:1;min-width:56px;background:var(--panel2);border:1px solid var(--line);color:var(--sub);padding:9px;border-radius:9px;cursor:pointer;font-size:12px;font-weight:700}
+      #grape .prob{font-size:30px;font-weight:900;text-align:center}
+    </style>
+    <div class="card">
+      <h2>ブドウカウンター</h2>
+      <p class="desc">実戦でブドウをリアルタイムカウント。総回転数とブドウ数から、いま設定いくつ相当かを判定します（判別は3000G以上で信頼度UP）。</p>
+      <div class="field"><label>機種</label><select id="gc_model" onchange="gcRender()"></select></div>
+      <div class="grid2">
+        <div class="field"><label>総回転数 G</label><input id="gc_g" type="number" inputmode="numeric" value="0" oninput="gcRender()"></div>
+        <div class="field"><label>ブドウ回数</label><input id="gc_grape" type="number" inputmode="numeric" value="0" oninput="gcRender()"></div>
+      </div>
+      <div class="qg">
+        <button onclick="gcAddG(10)">G +10</button><button onclick="gcAddG(50)">G +50</button>
+        <button onclick="gcAddG(100)">G +100</button><button onclick="gcAddG(-10)">G −10</button>
+      </div>
+      <button class="gcbig" style="margin-top:12px" onclick="gcAddGrape(1)">🍇 ブドウ ＋1</button>
+      <div class="gcsub">
+        <button onclick="gcAddGrape(-1)">ブドウ −1（訂正）</button>
+        <button onclick="gcReset()">リセット</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2 style="font-size:15px">判定</h2>
+      <div class="grid2" style="margin-bottom:12px">
+        <div class="stat"><div class="prob" id="gc_prob">1/-</div><div class="k">現在のブドウ確率</div></div>
+        <div class="stat"><div class="v" id="gc_near" style="font-size:20px">-</div><div class="k">最も近い設定</div></div>
+      </div>
+      <div class="scrollx"><table id="gc_table"></table></div>
+      <p class="muted" id="gc_note" style="margin-top:10px"></p>
+    </div>
+  </section>
+
+<!-- イベント編集モーダル -->
+<div class="modal" id="ev_modal">
+  <div class="sheet">
+    <h3 id="ev_title">イベント</h3>
+    <div id="ev_list" style="margin-bottom:12px"></div>
+    <div class="field"><label>店舗</label><input id="ev_store" type="text" list="storelist" placeholder="例: ○○会館"><datalist id="storelist"></datalist></div>
+    <div class="grid2">
+      <div class="field"><label>種別</label>
+        <select id="ev_type">
+          <option value="red">取材/特日</option><option value="blue">旧イベント日</option>
+          <option value="green">並び/狙い目</option><option value="purple">その他</option>
+        </select>
+      </div>
+      <div class="field"><label>注目度</label>
+        <select id="ev_stars">
+          <option value="1">★（気になる）</option>
+          <option value="2" selected>★★（有力）</option>
+          <option value="3">★★★（本命）</option>
+        </select>
+      </div>
+    </div>
+    <div class="field"><label>メモ</label><input id="ev_memo" type="text" placeholder="例: 全456系・末尾7に注目 など"></div>
+    <div class="row"><button class="btn" onclick="saveEvent()">追加</button><button class="btn sec" onclick="closeModal()">閉じる</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- 共有用: Supabase クライアント（オフラインでも他機能は動作） -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* ============================================================
+   ★★ 共有設定（Supabase）★★
+   下の2つに、あなたのSupabaseプロジェクトの値を貼り付けてください。
+   （未設定なら「この端末のみ保存」で全機能そのまま動きます）
+   取得場所: Supabase → Project Settings → API
+   ============================================================ */
+const SUPA_URL = 'https://cocgxbjrgupbqqefnpyy.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNvY2d4YmpyZ3VwYnFxZWZucHl5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMxODk2NTUsImV4cCI6MjA5ODc2NTY1NX0.gALz2PRNC8nZEL_nw_-GM2ZUGo0o088PJQFdRzxMbgA';
+
+/* ============================================================
+   機種スペック（6号機・公表値 / 2026-06時点）
+   big/reg/合算 は分母(1/x), grape は分母, rate は機械割%
+   出典: けんのスロットシミュレーション 他
+   ============================================================ */
+const MODELS={
+ "マイジャグラーV":{big:[273.1,270.8,266.4,254.0,240.1,229.1],reg:[409.6,385.5,336.1,290.0,268.6,229.1],grape:[5.98,5.88,5.84,5.81,5.76,5.65],rate:[97.0,98.0,99.9,102.8,105.3,109.4]},
+ "アイムジャグラーEX":{big:[273.1,269.7,269.7,259.0,259.0,255.0],reg:[439.8,399.6,331.0,315.1,255.0,255.0],grape:[6.01,6.01,6.01,6.01,6.01,5.80],rate:[97.0,98.0,99.5,101.1,103.3,105.5]},
+ "ファンキージャグラー2":{big:[266.4,259.0,256.0,249.2,240.1,219.9],reg:[439.8,407.1,366.1,322.8,299.3,262.1],grape:[5.94,5.92,5.90,5.83,5.80,5.70],rate:[97.0,98.5,99.8,102.0,104.3,109.0]},
+ "ゴーゴージャグラー3":{big:[259.0,258.0,257.0,254.0,247.3,234.9],reg:[354.2,332.7,306.2,268.6,247.3,234.9],grape:[6.25,6.18,6.10,6.07,5.98,5.92],rate:[97.2,98.2,99.4,101.6,103.8,106.5]},
+ "ウルトラミラクルジャグラー":{big:[267.5,261.1,256.0,242.7,233.2,216.3],reg:[425.6,402.1,350.5,322.8,297.9,277.7],grape:null,rate:[97.0,98.1,99.8,102.1,104.5,108.1]},
+ "ハッピージャグラーVIII":{big:[273.1,270.8,263.2,254.0,239.2,226.0],reg:[397.2,362.1,332.7,300.6,273.1,256.0],grape:null,rate:[97.0,98.1,99.9,102.9,105.8,108.4]},
+ "ミスタージャグラー":{big:[268.6,267.5,260.1,249.2,240.9,237.4],reg:[374.5,354.2,331.0,291.3,257.0,237.4],grape:null,rate:[97.0,98.0,99.8,102.7,105.5,107.3]},
+ "ジャグラーガールズSS":{big:[273.1,270.8,260.1,250.1,243.6,226.0],reg:[381.0,350.5,316.6,281.3,270.8,252.1],grape:null,rate:[97.0,97.9,99.9,102.1,104.0,107.5]}
+};
+const MODEL_NAMES=Object.keys(MODELS);
+
+/* ============================================================
+   大分エリア プリセット（編集可・あくまで初期候補）
+   ============================================================ */
+const OITA_STORES=["マルハン大分店","マルハン大分駅南店","パラッツォ大分","エスパス大分","ベガスベガス大分","ニラク大分","ABC大分","キングラム大分","ピーアークワサダ","コスモ大分"];
+
+/* ---------- 数学ユーティリティ ---------- */
+function lgamma(x){const g=7,c=[0.99999999999980993,676.5203681218851,-1259.1392167224028,771.32342877765313,-176.61502916214059,12.507343278686905,-0.13857109526572012,9.9843695780195716e-6,1.5056327351493116e-7];if(x<0.5)return Math.log(Math.PI/Math.sin(Math.PI*x))-lgamma(1-x);x-=1;let a=c[0];const t=x+g+0.5;for(let i=1;i<g+2;i++)a+=c[i]/(x+i);return 0.5*Math.log(2*Math.PI)+(x+0.5)*Math.log(t)-t+Math.log(a);}
+function logPois(k,lam){if(lam<=0)return k===0?0:-1e9;return -lam+k*Math.log(lam)-lgamma(k+1);}
+
+/* ============================================================
+   設定予想（機種別ベイズ推定）— 共有関数
+   ============================================================ */
+// W: 尤度の重み {big,reg,grape}。通常は{1,1,1}、RB重視は{0.5,1.7,1.0}など。
+function estimate(modelName,g,big,reg,grape,W){
+  W=W||{big:1,reg:1,grape:1};
+  const m=MODELS[modelName]||MODELS["マイジャグラーV"];
+  const logp=[];
+  for(let s=0;s<6;s++){
+    let lp=0;
+    lp+=W.big*logPois(big,g/m.big[s]);
+    lp+=W.reg*logPois(reg,g/m.reg[s]);
+    if(grape>0&&m.grape)lp+=W.grape*logPois(grape,g/m.grape[s]);
+    logp.push(lp);
+  }
+  const mx=Math.max(...logp);let sum=0;
+  const w=logp.map(v=>{const e=Math.exp(v-mx);sum+=e;return e;});
+  const post=w.map(v=>v/sum);
+  const exp=post.reduce((a,p,i)=>a+p*(i+1),0);
+  return {post,exp};
+}
+
+function fillModelSelects(){
+  ['y_model','sim_model'].forEach(id=>{
+    document.getElementById(id).innerHTML=MODEL_NAMES.map(n=>`<option>${n}</option>`).join('');
+  });
+  // ブドウカウンターはブドウ確率がある機種のみ
+  const gEl=document.getElementById('gc_model');
+  if(gEl)gEl.innerHTML=MODEL_NAMES.filter(n=>MODELS[n].grape).map(n=>`<option>${n}</option>`).join('');
+}
+function onModelChange(which){
+  if(which==='y'){
+    const m=MODELS[document.getElementById('y_model').value];
+    document.getElementById('y_grapewrap').style.display=m.grape?'block':'none';
+    renderSpecTable();
+  }
+}
+function renderSpecTable(){
+  const name=document.getElementById('y_model').value;const m=MODELS[name];
+  let h='<tr><th>設定</th><th>BIG</th><th>REG</th><th>合算</th>'+(m.grape?'<th>ブドウ</th>':'')+'<th>機械割</th></tr>';
+  for(let s=0;s<6;s++){
+    const comb=1/(1/m.big[s]+1/m.reg[s]);
+    h+=`<tr><td>設定${s+1}</td><td>1/${m.big[s].toFixed(1)}</td><td>1/${m.reg[s].toFixed(1)}</td><td>1/${comb.toFixed(1)}</td>`+
+       (m.grape?`<td>1/${m.grape[s].toFixed(2)}</td>`:'')+`<td>${m.rate[s].toFixed(1)}%</td></tr>`;
+  }
+  document.getElementById('y_spec').innerHTML=h;
+}
+
+function runYosou(){
+  const name=document.getElementById('y_model').value;
+  const g=+document.getElementById('y_g').value;
+  const big=+document.getElementById('y_big').value||0;
+  const reg=+document.getElementById('y_reg').value||0;
+  const grape=+document.getElementById('y_grape').value||0;
+  if(!g||g<100){toast('総回転数を入力してください');return;}
+  const {post,exp}=estimate(name,g,big,reg,grape);
+  const comb=big+reg>0?(g/(big+reg)).toFixed(1):'-';
+  const regp=reg>0?(g/reg).toFixed(1):'-';
+  document.getElementById('y_comb').textContent='1/'+comb;
+  document.getElementById('y_regp').textContent='1/'+regp;
+  document.getElementById('y_exp').textContent=exp.toFixed(2);
+  const cols=['#7b8194','#7b8194','#46a0ff','#37d67a','#ff9b2f','#ff5d5d'];
+  let html='';
+  post.forEach((p,i)=>{const pct=p*100;
+    html+=`<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="font-weight:700">設定${i+1}</span><span class="muted">${pct.toFixed(1)}%</span></div><div class="barwrap"><div class="bar" style="width:${Math.max(pct,2)}%;background:${cols[i]}">${pct>8?pct.toFixed(0)+'%':''}</div></div></div>`;});
+  document.getElementById('y_bars').innerHTML=html;
+  const best=post.indexOf(Math.max(...post))+1;
+  const verdict=exp>=4.5?'🔥 高設定の可能性が高い！':exp>=3.5?'⭕ 中間〜高設定域。続行検討。':exp>=2.5?'🤔 中間設定。判断は慎重に。':'❌ 低設定の可能性が高い。';
+  document.getElementById('y_note').innerHTML=`最有力は<b>設定${best}</b>。${verdict} ${(grape>0&&MODELS[name].grape)?'':'※ブドウ未入力のため精度は参考程度。'}`;
+  document.getElementById('y_result').style.display='block';
+
+  // ---- RB重視予測 ----
+  const rb=estimate(name,g,big,reg,grape,{big:0.5,reg:1.7,grape:1.0});
+  document.getElementById('y_exp2').textContent=rb.exp.toFixed(2);
+  const gap=rb.exp-exp;
+  document.getElementById('y_gap').textContent=(gap>=0?'+':'')+gap.toFixed(2);
+  document.getElementById('y_gap').style.color=gap>=0.3?'var(--green)':gap<=-0.3?'var(--red)':'var(--sub)';
+  let html2='';
+  rb.post.forEach((p,i)=>{const pct=p*100;
+    html2+=`<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="font-weight:700">設定${i+1}</span><span class="muted">${pct.toFixed(1)}%</span></div><div class="barwrap"><div class="bar" style="width:${Math.max(pct,2)}%;background:${cols[i]}">${pct>8?pct.toFixed(0)+'%':''}</div></div></div>`;});
+  document.getElementById('y_bars2').innerHTML=html2;
+  const rbBest=rb.post.indexOf(Math.max(...rb.post))+1;
+  let cmp;
+  if(gap>=0.4)cmp='REGが優秀で、通常予測より<b>上ブレ</b>。REGの引きが強く高設定期待度UP。';
+  else if(gap<=-0.4)cmp='REGが弱く、通常予測より<b>下ブレ</b>。BIG先行の可能性。REGが伸びるか継続注視。';
+  else cmp='通常予測とほぼ一致。REG基準でも同じ評価で、信頼度は高め。';
+  document.getElementById('y_note2').innerHTML=`RB重視の最有力は<b>設定${rbBest}</b>。${cmp}`;
+  document.getElementById('y_result2').style.display='block';
+  document.getElementById('y_result').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+/* ============================================================
+   データ層（Supabase共有 ＋ localStorageフォールバック）
+   EVENTS = {"YYYY-M-D":[{id,store,type,memo,stars}], ...}
+   ============================================================ */
+let sb=null, ROOM=localStorage.getItem('jug_room')||'friends';
+let EVENTS=JSON.parse(localStorage.getItem('jug_events')||'{}');
+function persistLocal(){localStorage.setItem('jug_events',JSON.stringify(EVENTS));}
+function initSupa(){
+  try{
+    if(window.supabase&&SUPA_URL&&SUPA_URL.indexOf('REPLACE')<0&&SUPA_KEY&&SUPA_KEY.indexOf('REPLACE')<0){
+      sb=window.supabase.createClient(SUPA_URL,SUPA_KEY);
+    }
+  }catch(e){sb=null;}
+}
+function setConn(state){
+  const el=document.getElementById('cal_conn');if(!el)return;
+  if(state===true){el.className='note';el.innerHTML=`🟢 <b>共有ON</b>（グループ: ${esc(ROOM)}）友達とリアルタイム同期中。`;}
+  else if(state===false){el.className='warn';el.innerHTML='🟠 サーバーに接続できません。オフライン表示中（復帰後に自動同期）。';}
+  else{el.className='warn';el.innerHTML='⚪ 未設定：この端末のみ保存。友達と共有するにはSupabaseを設定（README参照）。';}
+}
+async function loadEvents(){
+  if(sb){
+    try{
+      const {data,error}=await sb.from('events').select('*').eq('room',ROOM).order('created_at');
+      if(error)throw error;
+      const ev={};data.forEach(r=>{(ev[r.date]=ev[r.date]||[]).push({id:r.id,store:r.store,type:r.type,memo:r.memo,stars:r.stars});});
+      EVENTS=ev;persistLocal();setConn(true);
+    }catch(e){setConn(false);}
+  }else setConn(null);
+  renderCal();fillStoreDatalist();
+}
+let rtChannel=null;
+function subscribeRealtime(){
+  if(!sb)return;
+  try{if(rtChannel)sb.removeChannel(rtChannel);
+    rtChannel=sb.channel('ev-'+ROOM).on('postgres_changes',{event:'*',schema:'public',table:'events',filter:'room=eq.'+ROOM},()=>loadEvents()).subscribe();
+  }catch(e){}
+}
+function localAdd(dateKey,obj){(EVENTS[dateKey]=EVENTS[dateKey]||[]).push({id:'l'+Date.now()+Math.floor(Math.random()*1e6),...obj});}
+async function addEventRow(dateKey,obj){
+  if(sb){
+    try{
+      const {data,error}=await sb.from('events').insert({room:ROOM,date:dateKey,store:obj.store,type:obj.type,memo:obj.memo,stars:obj.stars}).select().single();
+      if(error)throw error;
+      (EVENTS[dateKey]=EVENTS[dateKey]||[]).push({id:data.id,...obj});
+    }catch(e){toast('共有保存に失敗。ローカルに保存');localAdd(dateKey,obj);}
+  }else localAdd(dateKey,obj);
+  persistLocal();renderCal();fillStoreDatalist();
+}
+async function removeEventRow(dateKey,id){
+  if(sb&&String(id).indexOf('l')!==0){try{await sb.from('events').delete().eq('id',id);}catch(e){toast('削除に失敗');}}
+  EVENTS[dateKey]=(EVENTS[dateKey]||[]).filter(e=>String(e.id)!==String(id));
+  if(!EVENTS[dateKey].length)delete EVENTS[dateKey];
+  persistLocal();renderCal();if(curEvKey)openEvent(curEvKey,curEvKey.split('-')[2]);
+}
+function setRoom(v){v=(v||'').trim()||'friends';ROOM=v;localStorage.setItem('jug_room',ROOM);loadEvents();subscribeRealtime();toast('グループ「'+ROOM+'」に切替');}
+function roomLink(){
+  const url=location.origin+location.pathname+'#room='+encodeURIComponent(ROOM);
+  if(navigator.clipboard)navigator.clipboard.writeText(url).then(()=>toast('参加リンクをコピーしました'),()=>prompt('コピーして共有:',url));
+  else prompt('コピーして共有:',url);
+}
+function fillStoreDatalist(){
+  const used=new Set(OITA_STORES);
+  Object.values(EVENTS).forEach(list=>list.forEach(e=>{if(e.store)used.add(e.store);}));
+  const dl=document.getElementById('storelist');
+  if(dl)dl.innerHTML=[...used].map(s=>`<option value="${esc(s)}">`).join('');
+}
+function exportEvents(){
+  const blob=new Blob([JSON.stringify({events:EVENTS},null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='juggler_calendar_'+new Date().toISOString().slice(0,10)+'.json';a.click();
+  toast('バックアップを書き出しました');
+}
+function onImportFile(input){
+  const f=input.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=async()=>{try{const inc=JSON.parse(r.result).events||{};
+    for(const k of Object.keys(inc)){for(const e of inc[k]){await addEventRow(k,{store:e.store,type:e.type,memo:e.memo,stars:e.stars||1});}}
+    toast('読み込みました');}catch(e){toast('ファイルが不正です');}input.value='';};
+  r.readAsText(f);
+}
+function checkHash(){
+  if(location.hash.indexOf('#room=')===0){
+    const r=decodeURIComponent(location.hash.slice(6));
+    if(r){ROOM=r;localStorage.setItem('jug_room',ROOM);}
+    history.replaceState(null,'',location.pathname);
+  }
+}
+
+/* ============================================================
+   イベントカレンダー
+   ============================================================ */
+let calY,calM;
+function initCal(){const d=new Date();calY=d.getFullYear();calM=d.getMonth();renderCal();}
+function calMove(n){calM+=n;if(calM<0){calM=11;calY--;}if(calM>11){calM=0;calY++;}renderCal();}
+function renderCal(){
+  document.getElementById('cal_title').textContent=`${calY}年${calM+1}月`;
+  const dow=['日','月','火','水','木','金','土'];
+  document.getElementById('cal_dow').innerHTML=dow.map(d=>`<div class="dow">${d}</div>`).join('');
+  const first=new Date(calY,calM,1).getDay();const days=new Date(calY,calM+1,0).getDate();
+  const ev=EVENTS;const today=new Date();const tkey=`${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`;
+  let html='';for(let i=0;i<first;i++)html+=`<div class="day empty-cell"></div>`;
+  for(let d=1;d<=days;d++){
+    const key=`${calY}-${calM}-${d}`;const dw=new Date(calY,calM,d).getDay();
+    const cls=dw===0?'sun':dw===6?'sat':'';const isToday=key===tkey?'today':'';
+    let dots='';if(ev[key]){const uniq=[...new Set(ev[key].map(e=>e.type))];dots=uniq.map(t=>`<span style="background:var(--${t})"></span>`).join('');}
+    const hot=ev[key]&&ev[key].some(e=>(e.stars||1)>=3)?' style="box-shadow:0 0 0 2px var(--accent) inset"':'';
+    html+=`<div class="day ${cls} ${isToday}"${hot} onclick="openEvent('${key}',${d})"><div class="num">${d}</div><div class="dot">${dots}</div></div>`;
+  }
+  document.getElementById('cal_grid').innerHTML=html;
+}
+const TYPE_LABEL={red:'取材/特日',blue:'旧イベント日',green:'並び/狙い目',purple:'その他'};
+let curEvKey=null;
+function openEvent(key,d){
+  curEvKey=key;
+  const [y,mo]=key.split('-');
+  document.getElementById('ev_title').textContent=`${y}年${+mo+1}月${d}日`;
+  const list=EVENTS[key]||[];
+  document.getElementById('ev_list').innerHTML=list.length?list.map((e)=>{
+    const stars='★'.repeat(e.stars||1);
+    return `<div class="evitem"><span class="pill" style="background:var(--${e.type});color:#fff">${TYPE_LABEL[e.type]||''}</span><span><b>${esc(e.store||'')}</b> <span style="color:var(--accent)">${stars}</span>${e.memo?'<br><span class="muted">'+esc(e.memo)+'</span>':''}</span><span class="x" onclick="removeEventRow('${key}','${e.id}')">✕</span></div>`;
+  }).join(''):'<p class="empty" style="padding:10px">予定なし。下から追加できます。</p>';
+  document.getElementById('ev_store').value='';
+  document.getElementById('ev_memo').value='';
+  document.getElementById('ev_modal').classList.add('show');
+}
+function saveEvent(){
+  const store=document.getElementById('ev_store').value.trim();
+  if(!store){toast('店舗を入力してください');return;}
+  const type=document.getElementById('ev_type').value;
+  const memo=document.getElementById('ev_memo').value.trim();
+  const stars=+document.getElementById('ev_stars').value||1;
+  addEventRow(curEvKey,{store,type,memo,stars}).then(()=>{openEvent(curEvKey,curEvKey.split('-')[2]);});
+  toast('追加しました');
+}
+function closeModal(){document.getElementById('ev_modal').classList.remove('show');}
+// 日付(yyyy-mm-dd)→ イベント有無
+function isEventDay(dateStr){
+  if(!dateStr)return false;const d=new Date(dateStr);
+  const key=`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  const ev=DB.getEv();return !!(ev[key]&&ev[key].length);
+}
+
+/* ============================================================
+   シミュレーター
+   ============================================================ */
+let simSetting=6;
+document.getElementById('sim_seg').addEventListener('click',e=>{
+  if(e.target.dataset.s){document.querySelectorAll('#sim_seg button').forEach(b=>b.classList.remove('on'));e.target.classList.add('on');simSetting=+e.target.dataset.s;}
+});
+function runSim(){
+  const name=document.getElementById('sim_model').value;const m=MODELS[name];const s=simSetting-1;
+  const G=Math.max(100,+document.getElementById('sim_g').value||8000);
+  const pBig=1/m.big[s],pReg=1/m.reg[s];
+  const pGrape=m.grape?1/m.grape[s]:1/6.0;
+  const BIG_OUT=251,REG_OUT=95,GRAPE_OUT=8;
+  // 機械割に一致するよう小役の平均払い出しを逆算
+  const targetOut=3*m.rate[s]/100;
+  const fill=targetOut-(pBig*BIG_OUT+pReg*REG_OUT)-pGrape*GRAPE_OUT;
+  let coin=0,nb=0,nr=0,ng=0,last=0,maxDiff=0,minDiff=0,maxHama=0;
+  const path=[0],bonuses=[];const step=Math.max(1,Math.floor(G/240));
+  for(let i=1;i<=G;i++){
+    coin-=3;const r=Math.random();
+    if(r<pBig){coin+=BIG_OUT;nb++;const h=i-last;bonuses.push({g:i,type:'BB',h,coin});last=i;if(h>maxHama)maxHama=h;}
+    else if(r<pBig+pReg){coin+=REG_OUT;nr++;const h=i-last;bonuses.push({g:i,type:'RB',h,coin});last=i;if(h>maxHama)maxHama=h;}
+    else if(r<pBig+pReg+pGrape){coin+=GRAPE_OUT;ng++;}
+    coin+=fill;
+    if(coin>maxDiff)maxDiff=coin;if(coin<minDiff)minDiff=coin;
+    if(i%step===0||i===G)path.push(Math.round(coin));
+  }
+  const diff=Math.round(coin),bonus=nb+nr,endHama=G-last;
+  const rate=((G*3+coin)/(G*3)*100);
+  document.getElementById('sim_coin').textContent=(diff>0?'+':'')+diff;
+  document.getElementById('sim_coin').style.color=diff>=0?'var(--green)':'var(--red)';
+  document.getElementById('sim_rate').textContent=rate.toFixed(1)+'%';
+  document.getElementById('sim_comb').textContent=bonus?'1/'+(G/bonus).toFixed(1):'1/-';
+  document.getElementById('sim_bb').textContent=nb;
+  document.getElementById('sim_rb').textContent=nr;
+  document.getElementById('sim_grape').textContent=ng?'1/'+(G/ng).toFixed(2):'1/-';
+  drawChart(path,G);
+  document.getElementById('sim_note').innerHTML=`${name} 設定${simSetting}（理論機械割 ${m.rate[s]}%）／ ${G}G 実戦。`+
+    `最大持ちメダル <b>+${Math.round(maxDiff)}</b>／最大ハマり <b>${maxHama}G</b>／最終ハマり ${endHama}G／ぶどう ${ng}回。 短期は大きくブレます。`;
+  // ボーナス履歴テーブル
+  let h='<tr><th>#</th><th>種別</th><th>当選G</th><th>ハマり</th><th>時点差枚</th></tr>';
+  if(bonuses.length){
+    bonuses.forEach((b,i)=>{
+      const col=b.type==='BB'?'var(--red)':'var(--blue)';
+      h+=`<tr><td>${i+1}</td><td style="color:${col};font-weight:700">${b.type}</td><td>${b.g}G</td><td>${b.h}G</td><td>${b.coin>0?'+':''}${Math.round(b.coin)}</td></tr>`;
+    });
+  }else h+='<tr><td colspan="5" style="text-align:center;color:var(--sub)">ボーナスなし（ハマり継続）</td></tr>';
+  document.getElementById('sim_hist').innerHTML=h;
+  document.getElementById('sim_result').style.display='block';
+  document.getElementById('sim_result').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function drawChart(path,G){
+  const cv=document.getElementById('sim_canvas');const ctx=cv.getContext('2d');const W=cv.width,H=cv.height;
+  ctx.clearRect(0,0,W,H);const pad=44;
+  const max=Math.max(...path,100),min=Math.min(...path,-100);const range=max-min||1;
+  const x=i=>pad+(W-pad-10)*i/(path.length-1);const y=v=>H-20-(H-40)*(v-min)/range;
+  ctx.strokeStyle='#313646';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad,y(0));ctx.lineTo(W-10,y(0));ctx.stroke();
+  ctx.fillStyle='#9aa3b8';ctx.font='11px sans-serif';
+  ctx.fillText('0',8,y(0)+4);ctx.fillText((max>0?'+':'')+Math.round(max),8,y(max)+10);ctx.fillText(Math.round(min),8,y(min)-2);ctx.fillText(G+'G',W-42,H-4);
+  ctx.beginPath();path.forEach((v,i)=>{i===0?ctx.moveTo(x(i),y(v)):ctx.lineTo(x(i),y(v));});
+  const last=path[path.length-1];ctx.strokeStyle=last>=0?'#37d67a':'#ff5d5d';ctx.lineWidth=2;ctx.stroke();
+  ctx.lineTo(x(path.length-1),y(0));ctx.lineTo(x(0),y(0));ctx.closePath();
+  ctx.fillStyle=last>=0?'rgba(55,214,122,.12)':'rgba(255,93,93,.12)';ctx.fill();
+}
+
+/* ============================================================
+   共通
+   ============================================================ */
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+let toastT;function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2200);}
+/* ============================================================
+   ブドウカウンター
+   ============================================================ */
+function gcAddG(n){const el=document.getElementById('gc_g');el.value=Math.max(0,(+el.value||0)+n);gcRender();}
+function gcAddGrape(n){const el=document.getElementById('gc_grape');el.value=Math.max(0,(+el.value||0)+n);gcRender();}
+function gcReset(){document.getElementById('gc_g').value=0;document.getElementById('gc_grape').value=0;gcRender();}
+function gcRender(){
+  const name=document.getElementById('gc_model').value;const m=MODELS[name];if(!m||!m.grape)return;
+  const g=+document.getElementById('gc_g').value||0;
+  const gr=+document.getElementById('gc_grape').value||0;
+  localStorage.setItem('jug_grape',JSON.stringify({name,g,gr}));
+  const prob=gr>0?g/gr:0;
+  document.getElementById('gc_prob').textContent=gr>0?'1/'+prob.toFixed(2):'1/-';
+  // 最も近い設定
+  const cols=['#7b8194','#7b8194','#46a0ff','#37d67a','#ff9b2f','#ff5d5d'];
+  let nearIdx=-1,best=1e9;
+  m.grape.forEach((v,i)=>{const d=Math.abs(v-prob);if(prob>0&&d<best){best=d;nearIdx=i;}});
+  document.getElementById('gc_near').textContent=(gr>0&&nearIdx>=0)?'設定'+(nearIdx+1)+'相当':'-';
+  document.getElementById('gc_near').style.color=nearIdx>=0?cols[nearIdx]:'var(--txt)';
+  let h='<tr><th>設定</th><th>理論ぶどう</th><th>あなたとの差</th></tr>';
+  m.grape.forEach((v,i)=>{
+    const hl=(i===nearIdx&&gr>0)?`style="background:rgba(255,206,58,.12)"`:'';
+    const d=prob>0?(prob-v):null;
+    h+=`<tr ${hl}><td>設定${i+1}${i===nearIdx&&gr>0?' ◀':''}</td><td>1/${v.toFixed(2)}</td><td>${d===null?'-':(d>0?'+':'')+d.toFixed(2)}</td></tr>`;
+  });
+  document.getElementById('gc_table').innerHTML=h;
+  const reliable=g>=3000;
+  document.getElementById('gc_note').innerHTML=gr>0?
+    `${g}G / ${gr}回。${reliable?'✅ サンプル十分。信頼度高め。':'⚠️ '+g+'Gは少なめ。3000G以上で精度が上がります。'}<br>ぶどうだけで断定せず、REG確率と合わせて判断を。`:
+    'ブドウを1つ引くたびに「🍇 ブドウ ＋1」を押してください。総回転数も更新を。';
+}
+
+function refreshAll(){fillStoreDatalist();gcRender();}
+
+document.getElementById('nav').addEventListener('click',e=>{
+  if(!e.target.dataset.t)return;
+  document.querySelectorAll('#nav button').forEach(b=>b.classList.remove('active'));
+  e.target.classList.add('active');
+  document.querySelectorAll('section').forEach(s=>s.classList.remove('active'));
+  document.getElementById(e.target.dataset.t).classList.add('active');
+});
+
+(function init(){
+  fillModelSelects();
+  document.getElementById('y_model').value='マイジャグラーV';
+  document.getElementById('sim_model').value='マイジャグラーV';
+  onModelChange('y');
+  // ブドウカウンター 復元
+  try{const gs=JSON.parse(localStorage.getItem('jug_grape'));
+    if(gs){if([...document.getElementById('gc_model').options].some(o=>o.value===gs.name))document.getElementById('gc_model').value=gs.name;
+      document.getElementById('gc_g').value=gs.g||0;document.getElementById('gc_grape').value=gs.gr||0;}}catch(e){}
+  gcRender();
+  // 共有（Supabase）
+  checkHash();                 // #room= があれば ROOM 設定
+  initSupa();                  // 設定済みならクライアント生成
+  document.getElementById('cal_room').value=ROOM;
+  initCal();                   // localStorageキャッシュで即描画
+  fillStoreDatalist();
+  loadEvents();                // Supabaseから最新を取得（未設定ならローカルのまま）
+  subscribeRealtime();         // 友達の更新をリアルタイム反映
+})();
+</script>
+
+<script>
+/* ============================================================
+   実機風スロット（ジャグラータイプ）— オリジナル実装
+   マイジャグラーVの確率で動作。図柄/ランプ/音は自作。
+   ============================================================ */
+const PL=(function(){
+  const GH=66, LEN=21;
+  // 実機マイジャグラーVのリール配列(事実データ)を反映。図柄の絵は当アプリ独自。
+  // 図柄カテゴリ: SEVEN=7(BIG), BAR=BAR(REG), GRAPE=ぶどう, CHERRY=チェリー,
+  //   BELL=ベル, REPLAY=リプレイ(実機トラ位置), PIERROT=ピエロ(実機ピエロ位置)
+  const STRIPS=[
+    // 左リール
+    ['BELL','SEVEN','REPLAY','GRAPE','REPLAY','GRAPE','BAR','CHERRY','GRAPE','REPLAY','GRAPE','SEVEN','PIERROT','GRAPE','REPLAY','GRAPE','CHERRY','BAR','GRAPE','REPLAY','GRAPE'],
+    // 中リール
+    ['REPLAY','SEVEN','GRAPE','CHERRY','PIERROT','REPLAY','BAR','GRAPE','CHERRY','REPLAY','BELL','GRAPE','CHERRY','REPLAY','BAR','GRAPE','CHERRY','REPLAY','BELL','GRAPE','CHERRY'],
+    // 右リール
+    ['GRAPE','SEVEN','BAR','BELL','REPLAY','GRAPE','PIERROT','BELL','REPLAY','GRAPE','PIERROT','BELL','REPLAY','GRAPE','PIERROT','BELL','REPLAY','GRAPE','PIERROT','BELL','REPLAY']
+  ];
+  /* 図柄SVG（すべて当アプリ独自デザイン。実機の絵は不使用） */
+  const SYM={
+    SEVEN:{svg:'<svg viewBox="0 0 100 100"><path d="M20 18 H80 V34 L50 88 H28 L58 36 H20 Z" fill="#e60023" stroke="#7a0012" stroke-width="3" stroke-linejoin="round"/><path d="M72 58 l3.5 8 8.5 .8 -6.2 6 1.8 8.6 -7.6-4.4 -7.6 4.4 1.8-8.6 -6.2-6 8.5-.8 z" fill="#ffd23a" stroke="#b8860b" stroke-width="1.2"/></svg>'},
+    BAR:{svg:'<svg viewBox="0 0 100 100"><rect x="12" y="36" width="76" height="28" rx="6" fill="#15151c" stroke="#caa11a" stroke-width="3"/><text x="50" y="57" text-anchor="middle" font-family="Arial" font-size="22" font-weight="900" fill="#e60023">BAR</text></svg>'},
+    BELL:{svg:'<svg viewBox="0 0 100 100"><path d="M50 16 a6 6 0 0 1 6 6 c13 4 17 17 17 33 l5 11 H22 l5-11 c0-16 4-29 17-33 a6 6 0 0 1 6-6 z" fill="#ffd23a" stroke="#b8860b" stroke-width="3"/><circle cx="50" cy="83" r="7" fill="#caa11a"/><path d="M40 38 q6 -7 15 -5" stroke="#fff7c0" stroke-width="3" fill="none" opacity=".7" stroke-linecap="round"/></svg>'},
+    CHERRY:{svg:'<svg viewBox="0 0 100 100"><path d="M52 22 q16 4 24 -2" stroke="#2e7d32" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M52 22 q-12 16 -18 30" stroke="#2e7d32" stroke-width="4" fill="none"/><path d="M52 22 q5 18 14 28" stroke="#2e7d32" stroke-width="4" fill="none"/><circle cx="34" cy="64" r="14" fill="#e60023" stroke="#7a0012" stroke-width="2"/><circle cx="66" cy="56" r="14" fill="#e60023" stroke="#7a0012" stroke-width="2"/><circle cx="30" cy="59" r="4" fill="#fff" opacity=".6"/></svg>'},
+    GRAPE:{svg:'<svg viewBox="0 0 100 100"><g fill="#7cb342" stroke="#33691e" stroke-width="1.5"><circle cx="50" cy="42" r="9"/><circle cx="38" cy="52" r="9"/><circle cx="62" cy="52" r="9"/><circle cx="46" cy="62" r="9"/><circle cx="58" cy="62" r="9"/><circle cx="52" cy="76" r="9"/></g><path d="M52 32 q10 -13 21 -9 q-6 11 -19 13 z" fill="#2e7d32"/></svg>'},
+    REPLAY:{svg:'<svg viewBox="0 0 100 100"><path d="M28 52 a22 22 0 1 1 7 15" fill="none" stroke="#1e88e5" stroke-width="9" stroke-linecap="round"/><path d="M28 30 v20 h20 z" fill="#1e88e5"/></svg>'},
+    PIERROT:{svg:'<svg viewBox="0 0 100 100"><path d="M50 14 L72 50 L50 86 L28 50 Z" fill="#8e24aa" stroke="#4a148c" stroke-width="3" stroke-linejoin="round"/><path d="M50 30 L62 50 L50 70 L38 50 Z" fill="#ffd23a"/><circle cx="50" cy="50" r="6" fill="#e60023"/></svg>'}
+  };
+  const M=MODELS['マイジャグラーV'];
+  const PAY={BIG:240,REG:96,GRAPE:8,CHERRY:2,BELL:14,PIERROT:10};
+  const SAFE=[['SEVEN','BAR','REPLAY'],['BAR','SEVEN','GRAPE'],['GRAPE','BELL','BAR'],['REPLAY','SEVEN','BAR'],['BELL','GRAPE','SEVEN'],['SEVEN','GRAPE','BELL']];
+
+  let setting=5, credit=50, diff=0, games=0;
+  let bigCnt=0, regCnt=0, gamesSinceBonus=0, maxDiff=0, lastPayout=0;
+  let diffHistory=[], bonusHist=[];
+  let replayFlag=false, state='ready';
+  let outcome='NONE', targets=['','',''], lampTiming=-1, premium=false, stoppedCount=0;
+  let reels=[], raf=null, lastT=0;
+
+  function $(id){return document.getElementById(id);}
+  function snd(){return $('pl_sound') && $('pl_sound').checked;}
+
+  /* ---- WebAudio（自作サウンド） ---- */
+  let ac=null, hum=null;
+  function AC(){if(!ac)ac=new (window.AudioContext||window.webkitAudioContext)();return ac;}
+  function beep(freq,dur,type,vol){
+    if(!snd())return;
+    try{const c=AC();const o=c.createOscillator(),g=c.createGain();
+      o.type=type||'square';o.frequency.value=freq;
+      g.gain.value=(vol||0.05);o.connect(g);g.connect(c.destination);
+      const t=c.currentTime;o.start(t);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);o.stop(t+dur+0.02);
+    }catch(e){}
+  }
+  function humOn(){if(!snd()||hum)return;try{const c=AC();const o=c.createOscillator(),g=c.createGain();o.type='sawtooth';o.frequency.value=68;g.gain.value=0.016;o.connect(g);g.connect(c.destination);o.start();hum={o,g};}catch(e){}}
+  function humOff(){if(hum){try{const c=AC();hum.g.gain.exponentialRampToValueAtTime(0.0001,c.currentTime+0.12);hum.o.stop(c.currentTime+0.14);}catch(e){}hum=null;}}
+  const sTick=()=>beep(240,0.03,'square',0.025);
+  const sStop=()=>{beep(140,0.05,'square',0.06);beep(90,0.08,'sine',0.05);};
+  const sPeka=()=>{[784,988,1175,1568].forEach((f,i)=>setTimeout(()=>beep(f,0.16,'triangle',0.09),i*70));setTimeout(()=>beep(2093,0.25,'triangle',0.07),300);};
+  const sPrem=()=>{[1047,1319,1568,2093,1568,2093,2637].forEach((f,i)=>setTimeout(()=>beep(f,0.18,'triangle',0.1),i*80));};
+  const sCoin=()=>beep(1320,0.035,'square',0.035);
+  const sBig=()=>{[523,659,784,1047,1319,1047,1319,1568].forEach((f,i)=>setTimeout(()=>beep(f,0.16,'triangle',0.09),i*110));};
+  const sReg=()=>{[440,554,659,880,659,880].forEach((f,i)=>setTimeout(()=>beep(f,0.15,'triangle',0.085),i*110));};
+
+  /* ---- 描画 ---- */
+  function buildReels(){
+    reels=[0,1,2].map(i=>{
+      const el=$('pl_r'+i);const strip=STRIPS[i];
+      let h='';for(let k=0;k<LEN*2;k++){h+=`<div class="cell">${SYM[strip[k%LEN]].svg}</div>`;}
+      el.innerHTML=h;
+      return {el,pos:Math.random()*LEN,vel:0,st:'idle',sp:0,tp:0,t0:0,dur:0};
+    });
+    render();
+  }
+  function render(){reels.forEach(r=>{const p=((r.pos%LEN)+LEN)%LEN;r.el.style.transform=`translateY(${-p*GH}px)`;});}
+
+  function landingPos(reel,curr,sym){
+    const strip=STRIPS[reel];let best=Infinity;
+    for(let idx=0;idx<LEN;idx++){
+      if(strip[idx]!==sym)continue;
+      const lp=((idx-1)%LEN+LEN)%LEN;
+      let d=((lp-curr)%LEN+LEN)%LEN; if(d<3)d+=LEN;
+      if(d<best)best=d;
+    }
+    return curr+(best===Infinity?LEN:best);
+  }
+
+  /* ---- 確率抽選 ---- */
+  function roll(){
+    const s=setting;
+    const probs=[['BIG',1/M.big[s]],['REG',1/M.reg[s]],['GRAPE',1/M.grape[s]],['CHERRY',1/35],['REPLAY',1/7.3],['BELL',1/655],['PIERROT',1/655]];
+    const r=Math.random();let a=0;
+    for(const[k,p]of probs){a+=p;if(r<a)return k;}
+    return 'NONE';
+  }
+  function setTargets(o){
+    if(o==='BIG')return['SEVEN','SEVEN','SEVEN'];
+    if(o==='REG')return['BAR','BAR','BAR'];
+    if(o==='GRAPE')return['GRAPE','GRAPE','GRAPE'];
+    if(o==='REPLAY')return['REPLAY','REPLAY','REPLAY'];
+    if(o==='BELL')return['BELL','BELL','BELL'];
+    if(o==='PIERROT')return['PIERROT','PIERROT','PIERROT'];
+    if(o==='CHERRY')return['CHERRY','GRAPE','BAR'];
+    return SAFE[Math.floor(Math.random()*SAFE.length)];
+  }
+
+  /* ---- メインループ ---- */
+  function loop(t){
+    const dt=Math.min((t-lastT)/1000,0.05);lastT=t;
+    reels.forEach(r=>{
+      if(r.st==='spin'){r.pos+=r.vel*dt;}
+      else if(r.st==='stop'){
+        const k=Math.min((t-r.t0)/r.dur,1);const e=1-Math.pow(1-k,3);
+        r.pos=r.sp+(r.tp-r.sp)*e;
+        if(k>=1){r.pos=r.tp;r.st='stopped';}
+      }
+    });
+    render();
+    raf=requestAnimationFrame(loop);
+  }
+  function startLoop(){if(!raf){lastT=performance.now();raf=requestAnimationFrame(loop);}}
+
+  /* ---- 操作 ---- */
+  function spin(){
+    if(state!=='ready')return;
+    if(!replayFlag){ if(credit<3){toast('メダルが足りません');return;} credit-=3; diff-=3; }
+    replayFlag=false;
+    games++; gamesSinceBonus++; lastPayout=0;
+    outcome=roll(); targets=setTargets(outcome);
+    stoppedCount=0;
+    pekaOff();
+    // 告知タイミング（ボーナスのみ）＋プレミア(ペカ)抽選
+    const isBonus=(outcome==='BIG'||outcome==='REG');
+    lampTiming=isBonus?Math.floor(Math.random()*4):-1;
+    premium=isBonus&&Math.random()<0.06;
+    reels.forEach(r=>{r.pos=((r.pos%LEN)+LEN)%LEN;r.vel=24+Math.random()*4;r.st='spin';r.el.classList.add('blur');});
+    startLoop();humOn();
+    state='spinning';
+    leverEnable(false);
+    [0,1,2].forEach(i=>$('pl_s'+i).disabled=false);
+    $('pl_state').textContent='ストップを押せ！';
+    $('pl_payout').textContent='0';
+    sTick();
+    updateLED();updateCounter();
+    if(lampTiming===0)pekaOn();
+    if($('pl_auto').checked)setTimeout(()=>autoStop(),360);
+  }
+  function autoStop(){[0,1,2].forEach((i,n)=>setTimeout(()=>{if(state==='spinning')stop(i);},n*270));}
+
+  function stop(i){
+    if(state!=='spinning')return;
+    const r=reels[i];
+    if(r.st!=='spin')return;
+    r.sp=r.pos; r.tp=landingPos(i,r.pos,targets[i]); r.t0=performance.now(); r.dur=380; r.st='stop';
+    setTimeout(()=>r.el.classList.remove('blur'),360);
+    $('pl_s'+i).disabled=true;
+    sStop();
+    stoppedCount++;
+    if(lampTiming===stoppedCount)pekaOn();
+    if(stoppedCount===3){state='stopping';humOff();waitAllStopped();}
+  }
+  function waitAllStopped(){
+    if(reels.every(r=>r.st==='stopped')){settle();}
+    else setTimeout(waitAllStopped,60);
+  }
+
+  /* ---- 払い出し・ボーナス ---- */
+  function settle(){
+    state='payout';
+    if(outcome==='BIG'||outcome==='REG'){
+      if(outcome==='BIG')bigCnt++;else regCnt++;
+      bonusHist.push({type:outcome,hamari:gamesSinceBonus});
+      gamesSinceBonus=0;
+      paylineWin();
+      outcome==='BIG'?sBig():sReg();
+      showBanner(outcome);
+      animateCoins(PAY[outcome],()=>{hideBanner();pekaOff();clearWin();finishGame();});
+    }else if(outcome==='REPLAY'){
+      replayFlag=true;$('pl_state').textContent='REPLAY';finishGame();
+    }else if(PAY[outcome]){
+      paylineWin();animateCoins(PAY[outcome],()=>{clearWin();finishGame();});
+    }else{
+      finishGame();
+    }
+  }
+  function animateCoins(n,done){
+    let left=n;
+    const tick=()=>{
+      const add=Math.min(left, n>=100?8:2);
+      credit+=add;diff+=add;lastPayout+=add;left-=add;
+      if(diff>maxDiff)maxDiff=diff;
+      sCoin();updateLED();
+      if(left>0)setTimeout(tick,40);else{updateCounter();if(done)setTimeout(done,200);}
+    };
+    tick();
+  }
+  function finishGame(){
+    state='ready';
+    leverEnable(true);
+    [0,1,2].forEach(i=>$('pl_s'+i).disabled=true);
+    if(outcome!=='REPLAY')$('pl_state').textContent='レバーON待ち';
+    $('pl_refill').style.display=(credit<3&&!replayFlag)?'block':'none';
+    if(diff>maxDiff)maxDiff=diff;
+    diffHistory.push(diff); if(diffHistory.length>4000)diffHistory.shift();
+    updateLED();updateCounter();
+    if($('pl_auto').checked&&(credit>=3||replayFlag))setTimeout(spin,300);
+  }
+
+  /* ---- ランプ・演出 ---- */
+  function pekaOn(){
+    const l=$('pl_lamp');
+    if(premium){l.classList.add('prem');sPrem();}else{l.classList.add('on');sPeka();}
+    const f=$('pl_flash');f.classList.remove('go');void f.offsetWidth;f.classList.add('go');
+  }
+  function pekaOff(){$('pl_lamp').classList.remove('on','prem');}
+  function paylineWin(){$('pl_payline').classList.add('win');}
+  function clearWin(){$('pl_payline').classList.remove('win');}
+  function leverEnable(on){$('pl_lever').classList.toggle('dis',!on);$('pl_max').disabled=!on;}
+  function showBanner(t){$('pl_banner_t').textContent=t==='BIG'?'BIG BONUS':'REG BONUS';$('pl_banner_s').textContent='+'+PAY[t]+'枚';$('pl_banner').classList.add('show');}
+  function hideBanner(){$('pl_banner').classList.remove('show');}
+
+  /* ---- LED・データカウンター ---- */
+  function updateLED(){
+    $('pl_credit').textContent=credit;
+    $('pl_payout').textContent=lastPayout;
+  }
+  function updateCounter(){
+    const bonus=bigCnt+regCnt;
+    $('dr_total').textContent=bonus;
+    $('dr_cur').textContent=gamesSinceBonus;
+    $('dr_cum').textContent=games;
+    $('dr_bb').textContent=bigCnt;$('dr_rb').textContent=regCnt;
+    $('dr_bbr').textContent=bigCnt?'1/'+Math.round(games/bigCnt):'1/-';
+    $('dr_rbr').textContent=regCnt?'1/'+Math.round(games/regCnt):'1/-';
+    $('dr_syn').textContent=bonus?'1/'+(games/bonus).toFixed(1):'1/-';
+    $('dr_diff2').textContent=(diff>0?'+':'')+diff;
+    $('dr_max').textContent=(maxDiff>0?'+':'')+maxDiff;
+    drawGraph();drawHist();
+  }
+  function drawGraph(){
+    const cv=$('dr_graph');if(!cv)return;const x=cv.getContext('2d');const W=cv.width,H=cv.height;
+    x.clearRect(0,0,W,H);
+    const data=diffHistory.length?diffHistory:[0];
+    let mn=Math.min(0,...data),mx=Math.max(0,...data);if(mx-mn<400){mx+=200;mn-=200;}
+    const yv=v=>H-2-(H-4)*(v-mn)/(mx-mn);
+    x.strokeStyle='#1c2735';x.lineWidth=1;x.beginPath();x.moveTo(0,yv(0));x.lineTo(W,yv(0));x.stroke();
+    const n=data.length;const xv=i=>n<=1?0:W*i/(n-1);
+    x.beginPath();data.forEach((v,i)=>{i?x.lineTo(xv(i),yv(v)):x.moveTo(xv(i),yv(v));});
+    x.strokeStyle=data[data.length-1]>=0?'#37f06b':'#ff5d5d';x.lineWidth=1.6;x.stroke();
+  }
+  function drawHist(){
+    const cv=$('dr_hist');if(!cv)return;const x=cv.getContext('2d');const W=cv.width,H=cv.height;
+    x.clearRect(0,0,W,H);
+    const show=bonusHist.slice(-18);if(!show.length)return;
+    const mx=Math.max(200,...show.map(b=>b.hamari));const bw=W/18;
+    show.forEach((b,i)=>{
+      const h=(H-12)*Math.min(b.hamari,mx)/mx;
+      x.fillStyle=b.type==='BIG'?'#ff3b5c':'#37a0ff';
+      x.fillRect(i*bw+1,H-11-h,bw-2,h);
+      x.fillStyle='#cfe';x.font='8px monospace';x.textAlign='center';
+      x.fillText(b.hamari,i*bw+bw/2,H-2);
+    });
+  }
+  function updateHint(){
+    const s=setting;const comb=1/(1/M.big[s]+1/M.reg[s]);
+    $('pl_hint').textContent=`合算 1/${comb.toFixed(1)} ／ ぶどう 1/${M.grape[s].toFixed(2)} ／ 機械割 ${M.rate[s]}%`;
+  }
+  function refill(){credit+=50;$('pl_refill').style.display='none';updateLED();
+    if(state==='ready')$('pl_state').textContent='レバーON待ち';toast('メダル+50');}
+
+  function init(){
+    buildReels();updateLED();updateCounter();updateHint();
+    $('pl_setting').addEventListener('change',e=>{setting=+e.target.value;updateHint();});
+  }
+  return {init,spin,stop,refill};
+})();
+window.addEventListener('load',()=>PL.init());
+</script>
+</body>
+</html>
