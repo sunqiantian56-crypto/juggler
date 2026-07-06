@@ -75,6 +75,9 @@
   .sheet h3{margin:0 0 14px}
   .legend{display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:var(--sub);margin-top:8px}
   .legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:4px}
+  .chip{display:inline-flex;align-items:center;gap:6px;background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:5px 10px;margin:3px 3px 0 0;font-size:12px;cursor:pointer}
+  .chip i{width:9px;height:9px;border-radius:50%}
+  .chip b{cursor:pointer;color:var(--sub);font-weight:700;margin-left:2px}
   .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--accent);color:#3a2a00;padding:11px 20px;border-radius:999px;font-weight:700;font-size:13px;z-index:200;opacity:0;transition:.3s;pointer-events:none;max-width:90%}
   .toast.show{opacity:1}
   .seg{display:flex;background:var(--panel2);border-radius:10px;padding:3px;border:1px solid var(--line)}
@@ -418,17 +421,16 @@
   </section>
 
 <!-- イベント編集モーダル -->
-<div class="modal" id="ev_modal">
+<div class="modal" id="ev_modal" onclick="if(event.target===this)closeModal()">
   <div class="sheet">
     <h3 id="ev_title">イベント</h3>
     <div id="ev_list" style="margin-bottom:12px"></div>
-    <div class="field"><label>店舗</label><input id="ev_store" type="text" list="storelist" placeholder="例: ○○会館"><datalist id="storelist"></datalist></div>
+    <div class="field"><label>店舗</label><input id="ev_store" type="text" list="storelist" placeholder="例: ○○会館"><datalist id="storelist"></datalist>
+      <div id="ev_store_chips" style="margin-top:6px"></div>
+    </div>
     <div class="grid2">
       <div class="field"><label>種別</label>
-        <select id="ev_type">
-          <option value="red">取材/特日</option><option value="blue">旧イベント日</option>
-          <option value="green">並び/狙い目</option><option value="purple">その他</option>
-        </select>
+        <select id="ev_type"></select>
       </div>
       <div class="field"><label>注目度</label>
         <select id="ev_stars">
@@ -439,7 +441,7 @@
       </div>
     </div>
     <div class="field"><label>メモ</label><input id="ev_memo" type="text" placeholder="例: 全456系・末尾7に注目 など"></div>
-    <div class="row"><button class="btn" onclick="saveEvent()">追加</button><button class="btn sec" onclick="closeModal()">閉じる</button></div>
+    <div class="row"><button class="btn" id="ev_save" onclick="saveEvent()">追加</button><button class="btn sec" onclick="closeModal()">閉じる</button></div>
   </div>
 </div>
 
@@ -592,7 +594,9 @@ function saveStores(){localStorage.setItem('jug_stores',JSON.stringify(STORES));
 // 種別ラベル→色（旧データの色キーも許容）
 function typeColor(t){const legacy=['red','orange','accent','green','blue','purple'];if(legacy.includes(t))return t;const f=TYPES.find(x=>x.label===t);return f?f.color:'purple';}
 function fillTypeSelect(){const el=document.getElementById('ev_type');if(el)el.innerHTML=TYPES.map(t=>`<option value="${esc(t.label)}">${esc(t.label)}</option>`).join('');}
-function renderLegend(){const el=document.getElementById('cal_legend');if(el)el.innerHTML=TYPES.map(t=>`<span><i style="background:var(--${t.color})"></i>${esc(t.label)}</span>`).join('');}
+const STAR_COLOR={1:'blue',2:'orange',3:'red'};
+function renderLegend(){const el=document.getElementById('cal_legend');if(el)el.innerHTML=
+  `<span><i style="background:var(--blue)"></i>★ 気になる</span><span><i style="background:var(--orange)"></i>★★ 有力</span><span><i style="background:var(--red)"></i>★★★ 本命</span>`;}
 function renderPresets(){
   const sEl=document.getElementById('preset_stores');
   if(sEl)sEl.innerHTML=STORES.length?STORES.map((s,i)=>`<span class="chip">${esc(s)}<b onclick="delStorePreset(${i})">✕</b></span>`).join(''):'<span class="muted">未登録</span>';
@@ -657,6 +661,12 @@ async function removeEventRow(dateKey,id){
   if(!EVENTS[dateKey].length)delete EVENTS[dateKey];
   persistLocal();renderCal();if(curEvKey)openEvent(curEvKey,curEvKey.split('-')[2]);
 }
+async function updateEventRow(dateKey,id,obj){
+  if(sb&&String(id).indexOf('l')!==0){try{const {error}=await sb.from('events').update({store:obj.store,type:obj.type,memo:obj.memo,stars:obj.stars}).eq('id',id);if(error)throw error;}catch(e){toast('更新に失敗');}}
+  const it=(EVENTS[dateKey]||[]).find(e=>String(e.id)===String(id));
+  if(it){it.store=obj.store;it.type=obj.type;it.memo=obj.memo;it.stars=obj.stars;}
+  persistLocal();renderCal();fillStoreDatalist();
+}
 function setRoom(v){v=(v||'').trim()||'friends';ROOM=v;localStorage.setItem('jug_room',ROOM);loadEvents();subscribeRealtime();toast('グループ「'+ROOM+'」に切替');}
 function roomLink(){
   const url=location.origin+location.pathname+'#room='+encodeURIComponent(ROOM);
@@ -707,25 +717,42 @@ function renderCal(){
   for(let d=1;d<=days;d++){
     const key=`${calY}-${calM}-${d}`;const dw=new Date(calY,calM,d).getDay();
     const cls=dw===0?'sun':dw===6?'sat':'';const isToday=key===tkey?'today':'';
-    let dots='';if(ev[key]){const uniq=[...new Set(ev[key].map(e=>e.type))];dots=uniq.map(t=>`<span style="background:var(--${typeColor(t)})"></span>`).join('');}
+    let dots='';if(ev[key]){const uniq=[...new Set(ev[key].map(e=>e.stars||1))].sort((a,b)=>a-b);dots=uniq.map(s=>`<span style="background:var(--${STAR_COLOR[s]||'blue'})"></span>`).join('');}
     const hot=ev[key]&&ev[key].some(e=>(e.stars||1)>=3)?' style="box-shadow:0 0 0 2px var(--accent) inset"':'';
     html+=`<div class="day ${cls} ${isToday}"${hot} onclick="openEvent('${key}',${d})"><div class="num">${d}</div><div class="dot">${dots}</div></div>`;
   }
   document.getElementById('cal_grid').innerHTML=html;
 }
-let curEvKey=null;
+let curEvKey=null, editId=null;
+function renderStoreChips(){
+  const el=document.getElementById('ev_store_chips');if(!el)return;
+  el.innerHTML=STORES.length?STORES.map(s=>`<span class="chip" data-s="${esc(s)}" onclick="document.getElementById('ev_store').value=this.dataset.s">${esc(s)}</span>`).join(''):'<span class="muted" style="font-size:11px">「プリセット登録」で店舗を登録すると、ここから選べます</span>';
+}
+function setSaveLabel(t){const b=document.getElementById('ev_save');if(b)b.textContent=t;}
 function openEvent(key,d){
-  curEvKey=key;
+  curEvKey=key; editId=null; setSaveLabel('追加');
   const [y,mo]=key.split('-');
   document.getElementById('ev_title').textContent=`${y}年${+mo+1}月${d}日`;
   const list=EVENTS[key]||[];
   document.getElementById('ev_list').innerHTML=list.length?list.map((e)=>{
     const stars='★'.repeat(e.stars||1);
-    return `<div class="evitem"><span class="pill" style="background:var(--${typeColor(e.type)});color:#fff">${esc(e.type||'')}</span><span><b>${esc(e.store||'')}</b> <span style="color:var(--accent)">${stars}</span>${e.memo?'<br><span class="muted">'+esc(e.memo)+'</span>':''}</span><span class="x" onclick="removeEventRow('${key}','${e.id}')">✕</span></div>`;
+    return `<div class="evitem"><span class="pill" style="background:var(--${typeColor(e.type)});color:#fff">${esc(e.type||'')}</span><span><b>${esc(e.store||'')}</b> <span style="color:var(--accent)">${stars}</span>${e.memo?'<br><span class="muted">'+esc(e.memo)+'</span>':''}</span><span class="x" onclick="editEvent('${key}','${e.id}')" style="color:var(--blue);margin-left:auto">✎</span><span class="x" onclick="removeEventRow('${key}','${e.id}')">✕</span></div>`;
   }).join(''):'<p class="empty" style="padding:10px">予定なし。下から追加できます。</p>';
   document.getElementById('ev_store').value='';
   document.getElementById('ev_memo').value='';
+  document.getElementById('ev_stars').value='2';
+  renderStoreChips();
   document.getElementById('ev_modal').classList.add('show');
+}
+function editEvent(key,id){
+  const e=(EVENTS[key]||[]).find(x=>String(x.id)===String(id));if(!e)return;
+  editId=id;
+  document.getElementById('ev_store').value=e.store||'';
+  document.getElementById('ev_type').value=e.type||(TYPES[0]&&TYPES[0].label)||'';
+  document.getElementById('ev_stars').value=e.stars||1;
+  document.getElementById('ev_memo').value=e.memo||'';
+  setSaveLabel('更新');
+  document.querySelector('#ev_modal .sheet').scrollTop=99999;
 }
 function saveEvent(){
   const store=document.getElementById('ev_store').value.trim();
@@ -733,10 +760,14 @@ function saveEvent(){
   const type=document.getElementById('ev_type').value;
   const memo=document.getElementById('ev_memo').value.trim();
   const stars=+document.getElementById('ev_stars').value||1;
-  addEventRow(curEvKey,{store,type,memo,stars}).then(()=>{openEvent(curEvKey,curEvKey.split('-')[2]);});
-  toast('追加しました');
+  const obj={store,type,memo,stars};
+  const wasEdit=!!editId;
+  const done=()=>openEvent(curEvKey,curEvKey.split('-')[2]);
+  if(wasEdit)updateEventRow(curEvKey,editId,obj).then(done);
+  else addEventRow(curEvKey,obj).then(done);
+  toast(wasEdit?'更新しました':'追加しました');
 }
-function closeModal(){document.getElementById('ev_modal').classList.remove('show');}
+function closeModal(){editId=null;setSaveLabel('追加');document.getElementById('ev_modal').classList.remove('show');}
 function isEventDay_removed(dateStr){
   if(!dateStr)return false;const d=new Date(dateStr);
   const key=`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
