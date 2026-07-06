@@ -239,8 +239,6 @@
     </div>
   </section>
 
-</main>
-
   <!-- ===================== 実機風スロット ===================== -->
   <section id="play">
     <style>
@@ -419,13 +417,14 @@
       <p class="muted" id="gc_note" style="margin-top:10px"></p>
     </div>
   </section>
+</main>
 
 <!-- イベント編集モーダル -->
 <div class="modal" id="ev_modal" onclick="if(event.target===this)closeModal()">
   <div class="sheet">
     <h3 id="ev_title">イベント</h3>
     <div id="ev_list" style="margin-bottom:12px"></div>
-    <div class="field"><label>店舗</label><input id="ev_store" type="text" list="storelist" placeholder="例: ○○会館"><datalist id="storelist"></datalist>
+    <div class="field"><label>店舗</label><input id="ev_store" type="text" placeholder="例: ○○会館 または下から選択">
       <div id="ev_store_chips" style="margin-top:6px"></div>
     </div>
     <div class="grid2">
@@ -848,7 +847,7 @@ let toastT;function toast(msg){const t=document.getElementById('toast');t.textCo
    ============================================================ */
 function gcAddG(n){const el=document.getElementById('gc_g');el.value=Math.max(0,(+el.value||0)+n);gcRender();}
 function gcAddGrape(n){const el=document.getElementById('gc_grape');el.value=Math.max(0,(+el.value||0)+n);gcRender();}
-function gcReset(){document.getElementById('gc_g').value=0;document.getElementById('gc_grape').value=0;gcRender();}
+function gcReset(){if(!confirm('カウントをリセットしますか？（回転数・ブドウ回数を0に戻します）'))return;document.getElementById('gc_g').value=0;document.getElementById('gc_grape').value=0;gcRender();toast('リセットしました');}
 function gcRender(){
   const name=document.getElementById('gc_model').value;const m=MODELS[name];if(!m||!m.grape)return;
   const g=+document.getElementById('gc_g').value||0;
@@ -860,13 +859,13 @@ function gcRender(){
   const cols=['#7b8194','#7b8194','#46a0ff','#37d67a','#ff9b2f','#ff5d5d'];
   let nearIdx=-1,best=1e9;
   m.grape.forEach((v,i)=>{const d=Math.abs(v-prob);if(prob>0&&d<best){best=d;nearIdx=i;}});
-  document.getElementById('gc_near').textContent=(gr>0&&nearIdx>=0)?'設定'+(nearIdx+1)+'相当':'-';
+  document.getElementById('gc_near').textContent=(gr>0&&nearIdx>=0)?(nearIdx+1)+'相当':'-';
   document.getElementById('gc_near').style.color=nearIdx>=0?cols[nearIdx]:'var(--txt)';
   let h='<tr><th>設定</th><th>理論ぶどう</th><th>あなたとの差</th></tr>';
   m.grape.forEach((v,i)=>{
     const hl=(i===nearIdx&&gr>0)?`style="background:rgba(255,206,58,.12)"`:'';
     const d=prob>0?(prob-v):null;
-    h+=`<tr ${hl}><td>設定${i+1}${i===nearIdx&&gr>0?' ◀':''}</td><td>1/${v.toFixed(2)}</td><td>${d===null?'-':(d>0?'+':'')+d.toFixed(2)}</td></tr>`;
+    h+=`<tr ${hl}><td>${i+1}${i===nearIdx&&gr>0?' ◀':''}</td><td>1/${v.toFixed(2)}</td><td>${d===null?'-':(d>0?'+':'')+d.toFixed(2)}</td></tr>`;
   });
   document.getElementById('gc_table').innerHTML=h;
   const reliable=g>=3000;
