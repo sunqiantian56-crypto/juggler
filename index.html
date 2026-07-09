@@ -108,6 +108,7 @@
     <button data-t="sim">🎰 シミュレーター</button>
     <button data-t="play">🕹️ 実機スロット</button>
     <button data-t="grape">🍇 ブドウカウンター</button>
+    <button data-t="guess">🎲 設定当て</button>
   </nav>
 </header>
 
@@ -417,6 +418,57 @@
       <p class="muted" id="gc_note" style="margin-top:10px"></p>
     </div>
   </section>
+
+  <!-- ===================== 設定当てゲーム ===================== -->
+  <section id="guess">
+    <style>
+      #guess .ggmeter{position:relative;margin:8px 0 4px}
+      #guess .ggmeter-track{height:16px;border-radius:999px;background:var(--panel2);border:1px solid var(--line);overflow:hidden}
+      #guess .ggmeter-fill{height:100%;width:50%;background:linear-gradient(90deg,#37d67a,#ffce3a 60%,#ff5d5d);transition:width .08s}
+      #guess input[type=range]{position:absolute;top:-5px;left:0;width:100%;margin:0;background:transparent;-webkit-appearance:none;appearance:none;height:26px}
+      #guess input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:#fff;border:3px solid var(--accent);box-shadow:0 2px 6px rgba(0,0,0,.45);cursor:pointer}
+      #guess input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;background:#fff;border:3px solid var(--accent);cursor:pointer}
+      #guess .ggread{font-size:26px;font-weight:900;color:var(--accent);font-family:"Courier New",monospace}
+      #guess .ggquick button{background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:9px;padding:9px 12px;cursor:pointer;font-weight:700}
+      #guess .gsel{display:grid;grid-template-columns:repeat(6,1fr);gap:7px;margin-top:8px}
+      #guess .gsel button{padding:16px 0;border-radius:12px;border:1px solid var(--line);background:var(--panel2);color:var(--txt);font-size:20px;font-weight:900;cursor:pointer;transition:.1s}
+      #guess .gsel button:active{transform:scale(.95)}
+      #guess .gsel button:disabled{cursor:default}
+    </style>
+    <div class="card">
+      <h2>設定当てゲーム</h2>
+      <p class="desc">機種と回転数を決めて「台データ生成」。ランダムな隠し設定でリアルな台データが作られます。データを見て設定を予想 → 正解とシステム予想を表示。設定判別の練習に。</p>
+      <div class="field"><label>機種</label><select id="gg_model"></select></div>
+      <label>回転数（0〜8000）— スライド・±ボタン・記入どれでもOK</label>
+      <div class="ggmeter"><div class="ggmeter-track"><div class="ggmeter-fill" id="gg_fill"></div></div>
+        <input type="range" id="gg_range" min="0" max="8000" step="50" value="4000" oninput="ggFromRange()"></div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <div class="ggread"><span id="gg_read">4000</span><span style="font-size:13px;color:var(--sub)"> 回転</span></div>
+        <input id="gg_num" type="number" min="0" max="8000" value="4000" onchange="ggFromNum()" style="width:100px">
+        <div class="ggquick" style="display:flex;gap:6px"><button onclick="ggBump(-500)">−500</button><button onclick="ggBump(500)">＋500</button></div>
+      </div>
+      <button class="btn" style="margin-top:14px" onclick="ggGen()">🎲 台データ生成</button>
+    </div>
+    <div class="card" id="gg_play" style="display:none">
+      <h2 style="font-size:15px">この台の設定は？</h2>
+      <div class="grid3" style="margin-bottom:6px">
+        <div class="stat"><div class="v" id="gg_comb">-</div><div class="k">合算</div></div>
+        <div class="stat"><div class="v" id="gg_regp">-</div><div class="k">REG</div></div>
+        <div class="stat"><div class="v" id="gg_grapep">-</div><div class="k">ブドウ</div></div>
+      </div>
+      <p class="muted" id="gg_raw"></p>
+      <div class="gsel" id="gg_sel">
+        <button onclick="ggGuess(1)">1</button><button onclick="ggGuess(2)">2</button><button onclick="ggGuess(3)">3</button>
+        <button onclick="ggGuess(4)">4</button><button onclick="ggGuess(5)">5</button><button onclick="ggGuess(6)">6</button>
+      </div>
+      <div id="gg_reveal" style="display:none;margin-top:14px"></div>
+      <div style="display:flex;margin-top:12px;justify-content:space-between">
+        <span class="muted">正解 <b id="gg_correct">0</b> / <b id="gg_total">0</b>（<span id="gg_rate">0</span>%）</span>
+        <span class="muted">連続正解 <b id="gg_streak">0</b></span>
+      </div>
+      <button class="btn sec" id="gg_next" style="display:none;margin-top:10px" onclick="ggGen()">次の問題 ▶</button>
+    </div>
+  </section>
 </main>
 
 <!-- イベント編集モーダル -->
@@ -507,8 +559,8 @@ function estimate(modelName,g,big,reg,grape,W){
 }
 
 function fillModelSelects(){
-  ['y_model','sim_model'].forEach(id=>{
-    document.getElementById(id).innerHTML=MODEL_NAMES.map(n=>`<option>${n}</option>`).join('');
+  ['y_model','sim_model','gg_model'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.innerHTML=MODEL_NAMES.map(n=>`<option>${n}</option>`).join('');
   });
   // ブドウカウンターはブドウ確率がある機種のみ
   const gEl=document.getElementById('gc_model');
@@ -874,6 +926,54 @@ function gcRender(){
     'ブドウを1つ引くたびに「🍇 ブドウ ＋1」を押してください。総回転数も更新を。';
 }
 
+/* ============================================================
+   設定当てゲーム
+   ============================================================ */
+let ggTrue=-1, ggData=null, ggAnswered=false, ggTotal=0, ggCorrect=0, ggStreak=0;
+function ggRandn(){let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+function ggPois(lam){if(lam<=0)return 0;if(lam<30){const L=Math.exp(-lam);let k=0,p=1;do{k++;p*=Math.random();}while(p>L);return k-1;}return Math.max(0,Math.round(lam+Math.sqrt(lam)*ggRandn()));}
+function ggClamp(v){v=Math.round(+v||0);return Math.max(0,Math.min(8000,v));}
+function ggApply(v,fromRange){document.getElementById('gg_read').textContent=v;document.getElementById('gg_fill').style.width=(v/8000*100)+'%';if(fromRange)document.getElementById('gg_num').value=v;else document.getElementById('gg_range').value=v;}
+function ggFromRange(){ggApply(ggClamp(document.getElementById('gg_range').value),true);}
+function ggFromNum(){const v=ggClamp(document.getElementById('gg_num').value);document.getElementById('gg_num').value=v;ggApply(v,false);}
+function ggBump(n){const v=ggClamp((+document.getElementById('gg_num').value||0)+n);document.getElementById('gg_num').value=v;ggApply(v,false);}
+function ggGen(){
+  const name=document.getElementById('gg_model').value;const m=MODELS[name];
+  const G=ggClamp(document.getElementById('gg_num').value);
+  if(G<500){toast('500回転以上にしてください');return;}
+  ggTrue=Math.floor(Math.random()*6);
+  const big=ggPois(G/m.big[ggTrue]),reg=ggPois(G/m.reg[ggTrue]),grape=m.grape?ggPois(G/m.grape[ggTrue]):0;
+  ggData={name,G,big,reg,grape};ggAnswered=false;
+  const comb=(big+reg)>0?(G/(big+reg)).toFixed(1):'-';
+  document.getElementById('gg_comb').textContent='1/'+comb;
+  document.getElementById('gg_regp').textContent=reg>0?'1/'+(G/reg).toFixed(1):'1/-';
+  document.getElementById('gg_grapep').textContent=m.grape?(grape>0?'1/'+(G/grape).toFixed(2):'1/-'):'—';
+  document.getElementById('gg_raw').innerHTML=`${G}G ／ BIG <b>${big}</b> ／ REG <b>${reg}</b>`+(m.grape?` ／ ブドウ <b>${grape}</b>`:'（この機種はブドウ判別要素なし）');
+  document.querySelectorAll('#gg_sel button').forEach(b=>{b.disabled=false;b.style.background='var(--panel2)';b.style.color='var(--txt)';});
+  document.getElementById('gg_reveal').style.display='none';
+  document.getElementById('gg_next').style.display='none';
+  document.getElementById('gg_play').style.display='block';
+}
+function ggGuess(s){
+  if(ggAnswered||!ggData)return;ggAnswered=true;
+  const trueSet=ggTrue+1, correct=(s===trueSet);
+  ggTotal++;if(correct){ggCorrect++;ggStreak++;}else ggStreak=0;
+  const {post,exp}=estimate(ggData.name,ggData.G,ggData.big,ggData.reg,ggData.grape);
+  const sysBest=post.indexOf(Math.max(...post))+1;
+  document.querySelectorAll('#gg_sel button').forEach((b,i)=>{b.disabled=true;const n=i+1;if(n===trueSet){b.style.background='var(--green)';b.style.color='#06351c';}else if(n===s){b.style.background='var(--red)';b.style.color='#fff';}});
+  const cols=['#7b8194','#7b8194','#46a0ff','#37d67a','#ff9b2f','#ff5d5d'];
+  let bars='';post.forEach((p,i)=>{const pct=p*100;bars+=`<div style="margin-bottom:5px"><div style="display:flex;justify-content:space-between;font-size:11px"><span>設定${i+1}</span><span class="muted">${pct.toFixed(0)}%</span></div><div class="barwrap" style="height:16px"><div class="bar" style="width:${Math.max(pct,2)}%;background:${cols[i]}"></div></div></div>`;});
+  document.getElementById('gg_reveal').innerHTML=
+    `<div class="note" style="text-align:center;font-size:15px">${correct?'🎉 正解！':'❌ ハズレ'}　正解は <b style="color:var(--green)">設定${trueSet}</b>（あなたの予想: 設定${s}）</div>`+
+    `<p class="muted" style="margin:8px 0 4px">🤖 システム予想: 期待設定 <b>${exp.toFixed(2)}</b> ／ 最有力 <b>設定${sysBest}</b>${sysBest===trueSet?'（システムも正解）':'（システムも外し＝難問データ）'}</p>`+bars;
+  document.getElementById('gg_reveal').style.display='block';
+  document.getElementById('gg_next').style.display='block';
+  document.getElementById('gg_correct').textContent=ggCorrect;
+  document.getElementById('gg_total').textContent=ggTotal;
+  document.getElementById('gg_rate').textContent=ggTotal?Math.round(ggCorrect/ggTotal*100):0;
+  document.getElementById('gg_streak').textContent=ggStreak;
+}
+
 function refreshAll(){fillStoreDatalist();gcRender();}
 
 document.getElementById('nav').addEventListener('click',e=>{
@@ -894,6 +994,7 @@ document.getElementById('nav').addEventListener('click',e=>{
     if(gs){if([...document.getElementById('gc_model').options].some(o=>o.value===gs.name))document.getElementById('gc_model').value=gs.name;
       document.getElementById('gc_g').value=gs.g||0;document.getElementById('gc_grape').value=gs.gr||0;}}catch(e){}
   gcRender();
+  ggFromNum();                 // 設定当てゲームのメーター初期化
   renderPresets();             // 店舗・種別プリセット＋凡例＋種別セレクト
   // 共有（Supabase）
   checkHash();                 // #room= があれば ROOM 設定
