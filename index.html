@@ -439,12 +439,13 @@
       <h2>設定当てゲーム</h2>
       <p class="desc">機種と回転数を決めて「台データ生成」。ランダムな隠し設定でリアルな台データが作られます。データを見て設定を予想 → 正解とシステム予想を表示。設定判別の練習に。</p>
       <div class="field"><label>機種</label><select id="gg_model"></select></div>
+      <button class="btn sec" style="margin-bottom:12px" onclick="openSpec(document.getElementById('gg_model').value)">📋 設定別スペックを見る</button>
       <label>回転数（0〜8000）— スライド・±ボタン・記入どれでもOK</label>
       <div class="ggmeter"><div class="ggmeter-track"><div class="ggmeter-fill" id="gg_fill"></div></div>
-        <input type="range" id="gg_range" min="0" max="8000" step="50" value="4000" oninput="ggFromRange()"></div>
+        <input type="range" id="gg_range" min="0" max="8000" step="50" value="3000" oninput="ggFromRange()"></div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-        <div class="ggread"><span id="gg_read">4000</span><span style="font-size:13px;color:var(--sub)"> 回転</span></div>
-        <input id="gg_num" type="number" min="0" max="8000" value="4000" onchange="ggFromNum()" style="width:100px">
+        <div class="ggread"><span id="gg_read">3000</span><span style="font-size:13px;color:var(--sub)"> 回転</span></div>
+        <input id="gg_num" type="number" min="0" max="8000" value="3000" onchange="ggFromNum()" style="width:100px">
         <div class="ggquick" style="display:flex;gap:6px"><button onclick="ggBump(-500)">−500</button><button onclick="ggBump(500)">＋500</button></div>
       </div>
       <label style="margin-top:14px;display:flex;align-items:center;gap:6px;color:var(--sub)"><input type="checkbox" id="gg_showgrape" style="width:auto" onchange="ggToggleGrape(this)"> ブドウ確率を表示する（判別が簡単になります）</label>
@@ -493,6 +494,15 @@
     </div>
     <div class="field"><label>メモ</label><input id="ev_memo" type="text" placeholder="例: 全456系・末尾7に注目 など"></div>
     <div class="row"><button class="btn" id="ev_save" onclick="saveEvent()">追加</button><button class="btn sec" onclick="closeModal()">閉じる</button></div>
+  </div>
+</div>
+
+<!-- 設定別スペック モーダル -->
+<div class="modal" id="spec_modal" onclick="if(event.target===this)closeSpec()">
+  <div class="sheet">
+    <h3 id="spec_title">設定別スペック</h3>
+    <div class="scrollx"><table id="spec_table"></table></div>
+    <button class="btn sec" style="margin-top:14px" onclick="closeSpec()">閉じる</button>
   </div>
 </div>
 
@@ -947,12 +957,24 @@ function ggGen(){
   // ブドウ表示: デフォOFF。チェックＯＮ かつ 機種にブドウ判別があるときだけ表示
   const showGrape=document.getElementById('gg_showgrape').checked && !!m.grape;
   ggTrue=Math.floor(Math.random()*6);
-  const big=ggPois(G/m.big[ggTrue]),reg=ggPois(G/m.reg[ggTrue]);
+  // ★ 1回転ごとに実際に抽選（リアルなモンテカルロ）
   const gden=m.grape?m.grape[ggTrue]:6.0;
-  const grape=ggPois(G/gden);
-  ggData={name,G,big,reg,grape,showGrape,hasGrape:!!m.grape};ggAnswered=false;
-  // 表示（BIG/REGの回数と確率、合算、ブドウ のみ）
-  document.getElementById('gg_raw').innerHTML=`総回転数 <b>${G}</b>G`;
+  const pBig=1/m.big[ggTrue],pReg=1/m.reg[ggTrue],pGrape=1/gden;
+  const BIG_OUT=251,REG_OUT=95,GRAPE_OUT=8;
+  const fill=3*m.rate[ggTrue]/100-(pBig*BIG_OUT+pReg*REG_OUT+pGrape*GRAPE_OUT); // 小役帳尻/G
+  let big=0,reg=0,grape=0,coin=0,lastHit=0;
+  for(let i=1;i<=G;i++){
+    coin-=3;const r=Math.random();
+    if(r<pBig){big++;coin+=BIG_OUT;lastHit=i;}
+    else if(r<pBig+pReg){reg++;coin+=REG_OUT;lastHit=i;}
+    else if(r<pBig+pReg+pGrape){grape++;coin+=GRAPE_OUT;}
+    coin+=fill;
+  }
+  const diffCoin=Math.round(coin);
+  // 実戦らしく、最後の当たりから数G回して止めた体にする（＝当たりで終わらせない）
+  ggData={name,G,big,reg,grape,showGrape,diffCoin,hasGrape:!!m.grape};ggAnswered=false;
+  // 表示（BIG/REGの回数と確率、合算、ブドウ、差枚）
+  document.getElementById('gg_raw').innerHTML=`総回転数 <b>${G}</b>G ／ 現在のハマり <b>${G-lastHit}</b>G`;
   const bigp=big>0?'1/'+(G/big).toFixed(1):'1/-';
   const regp=reg>0?'1/'+(G/reg).toFixed(1):'1/-';
   const comb=(big+reg)>0?'1/'+(G/(big+reg)).toFixed(1):'1/-';
@@ -968,6 +990,8 @@ function ggGen(){
   }else{
     rows+=`<tr><td>ブドウ</td><td colspan="2" class="muted">判別要素なし</td></tr>`;
   }
+  const dc=(diffCoin>0?'+':'')+diffCoin;
+  rows+=`<tr><td>差枚</td><td colspan="2" style="color:${diffCoin>=0?'var(--green)':'var(--red)'};font-weight:800">${dc} 枚</td></tr>`;
   document.getElementById('gg_table').innerHTML=rows;
   document.querySelectorAll('#gg_sel button').forEach(b=>{b.disabled=false;b.style.background='var(--panel2)';b.style.color='var(--txt)';});
   document.getElementById('gg_reveal').style.display='none';
@@ -998,15 +1022,30 @@ function ggUpdateScore(){
   big.textContent=rate+'%';big.style.color=col;
   document.getElementById('gg_score_line').innerHTML=`正解 <b style="color:${col}">${ggCorrect}</b> / ${ggTotal} ・ 連続 <b>${ggStreak}</b>`;
   // 評価（ランク）
-  let rank;
+  let rank,big2=false;
   if(rate>=90)rank='プロ';
   else if(rate>=80)rank='セミプロ';
   else if(rate>=50)rank='養分';
-  else rank='格好のカモ';
+  else {rank='🦆';big2=true;} // 格好のカモ → カモの絵
   const cm=document.getElementById('gg_comment');
-  cm.innerHTML=`評価　<b style="font-size:20px">${rank}</b>`;
+  cm.innerHTML=`評価　<b style="font-size:${big2?'34':'20'}px">${rank}</b>`;
   cm.style.color=col;
 }
+
+/* ---- 設定別スペック ポップアップ ---- */
+function openSpec(name){
+  const m=MODELS[name];if(!m)return;
+  document.getElementById('spec_title').textContent=name+'　設定別スペック';
+  let h='<tr><th>設定</th><th>BIG</th><th>REG</th><th>合算</th>'+(m.grape?'<th>ブドウ</th>':'')+'<th>機械割</th></tr>';
+  for(let s=0;s<6;s++){
+    const comb=1/(1/m.big[s]+1/m.reg[s]);
+    h+=`<tr><td>設定${s+1}</td><td>1/${m.big[s].toFixed(1)}</td><td>1/${m.reg[s].toFixed(1)}</td><td>1/${comb.toFixed(1)}</td>`+
+       (m.grape?`<td>1/${m.grape[s].toFixed(2)}</td>`:'')+`<td>${m.rate[s].toFixed(1)}%</td></tr>`;
+  }
+  document.getElementById('spec_table').innerHTML=h;
+  document.getElementById('spec_modal').classList.add('show');
+}
+function closeSpec(){document.getElementById('spec_modal').classList.remove('show');}
 
 function refreshAll(){fillStoreDatalist();gcRender();}
 
